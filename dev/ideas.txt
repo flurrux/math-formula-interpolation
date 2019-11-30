@@ -1,0 +1,18 @@
+
+- only non-group nodes are actually interpolated: char, text, rule, contours, rule
+
+transition cases:
+- move, scale, change color
+- branch node into several
+- merge several node into one
+- fade in / fade out
+- cancelling two nodes
+- morph node into another
+
+- specfiy node correspondence
+    - explicitly write them out as object: { from: node1, to: node2 }
+    - specify the path: { from: [["items", 2], "numerator", ["items", 1]], to: ... }
+    - specify an id in the formula, 
+    for interpolation functions write then: { id: [some-id], interpolate: [some-function] }
+    if a node branches into mutliple, the ids are not unique anymore. in that case use a 
+    second id, branchId, that takes precedence over the first id. 

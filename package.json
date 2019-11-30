@@ -1,0 +1,21 @@
+{
+  "name": "@flurrux/math-formula-interpolation",
+  "version": "1.0.0",
+  "description": "visual interpolation of formulas",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "parcel build index.html",
+    "prepublish": "npm run build"
+  },
+  "author": "Christian Hoffmann <christianhoffmann@outlook.com>",
+  "license": "ISC",
+  "dependencies": {
+    "@flurrux/math-layout-engine": "^1.0.3",
+    "ramda": "^0.26.1"
+  },
+  "devDependencies": {
+    "cssnano": "^4.1.10",
+    "typescript": "^3.6.4"
+  }
+}
