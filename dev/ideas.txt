@@ -1,4 +1,7 @@
 
+- find a good way to specify origin points, maybe when writing out nodes:
+{ type: "bin", value: "+", origin: [0.5, 0.5] } //place the origin at the middle of the node
+
 - only non-group nodes are actually interpolated: char, text, rule, contours, rule
 
 transition cases:
