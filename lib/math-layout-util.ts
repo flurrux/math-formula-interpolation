@@ -28,10 +28,10 @@ export const globalizePositions = (node: BoxNode) : BoxNode => {
     const childPaths = getChildPaths(node);
     if (childPaths === undefined) return node;
     for (const path of childPaths){
-        const child = viewPath(path)(node);
+        const child = viewPath(path)(node) as BoxNode;
         if (child === undefined) continue;
         const newChild = pipe(movePosition(node.position), globalizePositions)(child);
-        node = assocPath(path, newChild)(node);
+        node = assocPath(path, newChild)(node) as BoxNode;
     }
     return node;
 };
@@ -42,7 +42,7 @@ const mapFormulaTreeSub = (map: ((node: BoxNode) => BoxNode), node: BoxNode) => 
 
     let childrenOnlyObj = {};
     for (const path of childPaths){
-        const child = viewPath(path)(node);
+        const child = viewPath(path)(node) as BoxNode;
         if (child === undefined) continue;
         const newChild = mapFormulaTreeSub(map, child);
         childrenOnlyObj = assocPath(path, newChild)(childrenOnlyObj);
@@ -58,12 +58,12 @@ export const mapFormulaTree = (map: ((node: BoxNode) => BoxNode)) => ((node: Box
 export const translateGlobalPositionedFormulaTree = (translation: Vector2) => mapFormulaTree(movePosition(translation));
 
 export const alignSubNodeToGlobalPosition = (position: Vector2, path: PropertyPath) => ((node: BoxNode) => {
-    const subNode = viewPath(path)(node);
+    const subNode = viewPath(path)(node) as BoxNode;
     const delta = subVectors(position, subNode.position);
     return translateGlobalPositionedFormulaTree(delta)(node);
 });
 export const alignSubNodeToGlobalX = (x: number, path: PropertyPath) => ((node: BoxNode) => {
-    const subNode = viewPath(path)(node);
+    const subNode = viewPath(path)(node) as BoxNode;
     const delta = x - subNode.position[0];
     return translateGlobalPositionedFormulaTree([delta, 0])(node);
 });

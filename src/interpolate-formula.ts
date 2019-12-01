@@ -1,10 +1,10 @@
 
 import { Style } from '@flurrux/math-layout-engine/src/style';
 import { FormulaNode, BoxNode, Dimensions } from '@flurrux/math-layout-engine/src/types';
-import { fromPairs, identity, map, reduce, assocPath } from 'ramda';
+import { fromPairs, identity, map, reduce, assoc, assocPath, merge, omit } from 'ramda';
 import { interpolate, viewPath } from '../lib/util';
 import { interpolate as lerpVectors } from '../lib/vector2';
-import { collectIds } from '../lib/id-correspondence';
+import { collectIds, IdPathMap } from '../lib/id-correspondence';
 import { PropertyPath } from '../lib/types';
 
 //types #######
@@ -25,7 +25,7 @@ interface NodeInterpolationMap {
 };
 type FormulaInterpolationMap = NodeInterpolationMap[];
 
-type NodeIdSpec = PropertyPath | BoxNode;
+type NodeIdSpec = string | PropertyPath | BoxNode;
 //todo: find a way to make this interface either have from and to, or id.
 export interface NodeInterpolationSpec {
 	from?: NodeIdSpec, to?: NodeIdSpec,
@@ -34,7 +34,7 @@ export interface NodeInterpolationSpec {
 };
 
 const lookUpBoxNodeByByPathOrNode = (root: BoxNode, idSpec: NodeIdSpec) : BoxNode => {
-	return Array.isArray(idSpec) ? viewPath(idSpec as PropertyPath)(root) : (idSpec as BoxNode);
+	return Array.isArray(idSpec) ? (viewPath(idSpec as PropertyPath)(root) as BoxNode) : (idSpec as BoxNode);
 };
 export const normalizePathOrNodeSpecEntry = (from: BoxNode, to: BoxNode) => ((entry: NodeInterpolationSpec): NodeInterpolationMap => {
 	return {
@@ -44,24 +44,19 @@ export const normalizePathOrNodeSpecEntry = (from: BoxNode, to: BoxNode) => ((en
 	}
 });
 
-export const preProcessLerpSpecWithIds = (from: FormulaNode, to: FormulaNode, lerpSpec: NodeInterpolationSpec[]) : NodeInterpolationSpec[] => {
-	const lerpSpecsSeperated: { 
-			byId: NodeInterpolationSpec[], 
-			byPathOrNode: NodeInterpolationSpec[] 
-		} = reduce(((sep, entry: NodeInterpolationSpec) => {
-			const key = entry.id !== undefined ? "byId" : "byPathOrNode";
-			return assocPath([key, sep[key].length], entry)(sep);
-		}), { byId: [], byPathOrNode: [] })(lerpSpec);
-	
-	const idToLerpFuncMap: { [id: string]: NodeInterpolationFunc } = reduce((acc, val: NodeInterpolationSpec) => {
-			return Object.assign(acc, { [val.id]: val.interpolate });
-		}, {}, lerpSpecsSeperated.byId);
+const spreadIdAsFromTo = (entry: NodeInterpolationSpec) : NodeInterpolationSpec => {
+	if (entry.id === undefined) return entry;
+	return omit(["id"], merge(entry, { from: entry.id, to: entry.id }));
+};
+const createCorrespondenceFromIds = (from: FormulaNode, to: FormulaNode) => {
+	const correspondences: {
+			sharedId: string, fromUniqueId: string, toUniqueId: string,
+			fromPath: PropertyPath, toPath: PropertyPath,
+		}[] = [];
 
 	const fromIdMap = collectIds(from);
-	const toIdMap = collectIds(to);
-	const ids = Reflect.ownKeys(fromIdMap) as string[];
-
-	const processedIdSpecs : { from: PropertyPath, to: PropertyPath, interpolate: NodeInterpolationFunc }[] = [];
+	const toIdMap = collectIds(to);	
+	const ids = Reflect.ownKeys(fromIdMap) as string[];	
 	for (const id of ids) {
 		const fromPaths = fromIdMap[id];
 		const toPaths = toIdMap[id];
@@ -71,24 +66,68 @@ export const preProcessLerpSpecWithIds = (from: FormulaNode, to: FormulaNode, le
 		//case 2: single -> multiple (branching)
 		//case 3: multiple -> single (merging)
 		for (let i = 0; i < fromPaths.length; i++) {
+			const fromEntry = fromPaths[i];
 			for (let j = 0; j < toPaths.length; j++) {
-				processedIdSpecs.push({
-					from: fromPaths[i],
-					to: toPaths[j],
-					interpolate: idToLerpFuncMap[id] || interpolateNodes
+				const toEntry = toPaths[j];
+				correspondences.push({
+					fromUniqueId: fromEntry.uniqueId,
+					toUniqueId: toEntry.uniqueId,
+					sharedId: id,
+					fromPath: fromEntry.path,
+					toPath: toEntry.path
 				});
 			}
 		}
 	}
-
-	return [
-		...processedIdSpecs, 
-		...lerpSpecsSeperated.byPathOrNode
-	]
+	return correspondences;
 };
 
-export const execInterpolation = (t: number) => ((lerpEntry: NodeInterpolationMap) : NodeInterpolation => lerpEntry.interpolate(lerpEntry.from, lerpEntry.to, t));
-export const interpolateFormulas = (lerpMap: FormulaInterpolationMap) => ((t: number) : FormulaInterpolation => map(execInterpolation(t))(lerpMap));
+type CorrespondenceSpecType = ("id" | "path" | "node");
+const getTypeOfCorrespondenceSpec = (spec: NodeIdSpec) : CorrespondenceSpecType => {
+	if (Array.isArray(spec)) return "path";
+	if (typeof(spec) === "string") return "id";
+	return "node";
+};
+const validateCorrespondenceSpecTypes = (fromType: CorrespondenceSpecType, toType: CorrespondenceSpecType) => {
+	if ((fromType === "id" && toType !== "id") || (toType === "id" && fromType !== "id")){
+		throw `from: "${fromType}" and to: "${toType}" are not valid correspondence-types. either use id for both or path/node.`
+	}
+};
+export const preProcessLerpSpecWithIds = (from: FormulaNode, to: FormulaNode, lerpSpec: NodeInterpolationSpec[]) : NodeInterpolationSpec[] => {
+	//example: { id: "exp3" } => { from: "exp3", to: "exp3" }
+	lerpSpec = map(spreadIdAsFromTo, lerpSpec);
+	
+	const lerpSpecsSeperated : { byId: NodeInterpolationSpec[], byPathOrNode: NodeInterpolationSpec[] } = reduce((acc, val) => {
+		const fromType = getTypeOfCorrespondenceSpec(val.from);
+		const toType = getTypeOfCorrespondenceSpec(val.to);
+		validateCorrespondenceSpecTypes(fromType, toType);
+		const prop = fromType === "id" ? "byId" : "byPathOrNode";
+		return assocPath([prop, acc[prop].length], val, acc);
+	}, { byId: [], byPathOrNode: [] }, lerpSpec);
+
+	const correspondencesById = createCorrespondenceFromIds(from, to);
+	const lerpSpecsById : NodeInterpolationSpec[] = correspondencesById.map(corr => {
+		const corrLerpSpec = lerpSpecsSeperated.byId.find((spec) => spec.from === corr.fromUniqueId && spec.to === corr.toUniqueId);
+		const interpolateFunc = corrLerpSpec ? corrLerpSpec.interpolate : interpolateNodes;
+		return {
+			from: corr.fromPath,
+			to: corr.toPath,
+			interpolate: interpolateFunc
+		}
+	});
+
+	return [
+		...lerpSpecsById,
+		...lerpSpecsSeperated.byPathOrNode
+	];
+};
+
+export const execInterpolation = (t: number) => ((lerpEntry: NodeInterpolationMap): NodeInterpolation => {
+	return lerpEntry.interpolate(lerpEntry.from, lerpEntry.to, t) as NodeInterpolation;
+});
+export const interpolateFormulas = (lerpMap: FormulaInterpolationMap) => {
+	return ((t: number) : FormulaInterpolation => map(execInterpolation(t))(lerpMap));
+};
 
 //interpolation #####################
 
@@ -101,16 +140,16 @@ const interpolateCssColors = (a: string, b: string, t: number) : string => {
 };
 const interpolateStyles = (a: Style, b: Style, t: number) : Style => identity({
     ...a,
-    fontSize: interpolate(a.fontSize, b.fontSize, t),
-    color: interpolateCssColors(a.color, b.color, t)
+	...((a.fontSize && b.fontSize) ? { fontSize: interpolate(a.fontSize, b.fontSize, t)} : {}),
+	...((a.color && b.color) ? { color: interpolateCssColors(a.color, b.color, t) } : {})
 });
 const interpolateDimensions = (a: Dimensions, b: Dimensions, t: number) : Dimensions => {
-    return fromPairs(["width", "yMin", "yMax"].map(prop => [prop, interpolate(a[prop], b[prop], t)]));
+    return (fromPairs(["width", "yMin", "yMax"].map(prop => [prop, interpolate(a[prop], b[prop], t)])) as unknown) as Dimensions;
 };
 export const interpolateNodes = (a: InterpolatableNode, b: InterpolatableNode, t: number) : NodeInterpolation => {
 	return {
         ...a,
-        style: interpolateStyles(a.style, b.style, t),
+        ...(a.style ? { style: interpolateStyles(a.style, b.style, t) } : {}),
         position: lerpVectors(a.position, b.position, t),
         dimensions: interpolateDimensions(a.dimensions, b.dimensions, t)
     }

@@ -1,10 +1,27 @@
 import { FormulaNode } from '@flurrux/math-layout-engine/src/types';
-import { assoc, lensPath, view } from 'ramda';
+import { assoc, lensPath, view, assocPath, range } from 'ramda';
 import { PropertyPath } from '../lib/types';
 import { NodeInterpolationSpec } from '../src/interpolate-formula';
-import { getChildPaths } from './math-layout-util';
 
-export type IdPathMap = { [key: string]: PropertyPath[] };
+export interface IdPathMap { 
+	[id: string]: {
+		path: PropertyPath,
+		uniqueId: string
+	}[]
+};
+
+const generateArrayItemPaths = (arrayProp: string, array: any[]): [string, number][] => {
+	return range(0, array.length).map((ind: number) => [arrayProp, ind]);
+};
+const getChildPaths = (node: FormulaNode): (string | number)[][] => {
+	const type = node.type;
+	if (["mathlist", "matrix"].includes(type)) return generateArrayItemPaths("items", (node as any).items);
+	else if (type === "fraction") return [["numerator"], ["denominator"]];
+	else if (type === "root") return [["radicand"], ["index"]];
+	else if (type === "script") return [["nucleus"], ["sup"], ["sub"]];
+	else if (type === "delimited") return [["delimited"], ["leftDelim"], ["rightDelim"]];
+	else if (type === "accented") return [["nucleus"], ["accent"]];
+};
 
 const isLeafNode = (node: FormulaNode): boolean => ["ord", "op", "bin", "rel", "open", "close", "punct"].includes(node.type);
 
@@ -15,54 +32,30 @@ const traverseFormulaTree = (forEachFunc: ((node: FormulaNode) => void), node: F
 	else {
 		const childPaths = [];
 		for (const childPath of childPaths) {
-			const childNode = view(lensPath(childPath))(node);
+			const childNode = view(lensPath(childPath))(node) as FormulaNode;
 			traverseFormulaTree(forEachFunc, childNode);
 		}
 	}
 };
 
 
-const getIdOfNode = (node: any) => node.branchId || node.id;
+const getUniqueIdOfNode = (node: any) => node.branchId || node.id;
 const collectIdsSub = (idMap: IdPathMap, currentPath: PropertyPath, node: FormulaNode): IdPathMap => {
 	if (isLeafNode(node)) {
-		const id = getIdOfNode(node);
+		const id = (node as any).id;
 		if (id !== undefined) {
-			idMap = assoc(id, [...(idMap[id] || []), currentPath], idMap);
+			idMap = assocPath([id, idMap[id] ? idMap[id].length : 0], { 
+					path: currentPath, uniqueId: getUniqueIdOfNode(node) 
+				}, idMap);
 		}
 	}
 	else {
 		const childPaths = getChildPaths(node);
 		for (const childPath of childPaths) {
-			const childNode = view(lensPath(childPath))(node);
+			const childNode = view(lensPath(childPath))(node) as FormulaNode;
 			idMap = collectIdsSub(idMap, [...currentPath, ...childPath], childNode);
 		}
 	}
 	return idMap;
 };
 export const collectIds = (node: FormulaNode): IdPathMap => collectIdsSub({}, [], node);
-
-const generateNodeInterpolationSpecByIds = (from: FormulaNode, to: FormulaNode): {} => {
-	const fromIdMap = collectIds(from);
-	const toIdMap = collectIds(to);
-	const ids = Reflect.ownKeys(fromIdMap) as string[];
-	
-	const spec = [];
-	for (const id of ids) {
-		const fromPaths = fromIdMap[id];
-		const toPaths = toIdMap[id];
-
-		//this is a double-loop because it's easier than to write out all the cases
-		//case 1: single -> single
-		//case 2: single -> multiple (branching)
-		//case 3: multiple -> single (merging)
-		for (let i = 0; i < fromPaths.length; i++) {
-			for (let j = 0; j < toPaths.length; j++) {
-				spec.push({
-					from: fromPaths[i],
-					to: toPaths[j]
-				});
-			}
-		}
-	}
-	return spec;
-};

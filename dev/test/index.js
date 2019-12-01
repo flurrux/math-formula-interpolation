@@ -5,7 +5,7 @@ import { layoutFormula, loadKatexFontFaces } from '@flurrux/math-layout-engine';
 import { setPosition } from '@flurrux/math-layout-engine/src/layout/layout-util';
 import { renderNode } from '@flurrux/math-layout-engine/src/rendering/render';
 import { assocPath, map, pipe } from 'ramda';
-import { globalizePositions, movePosition } from '../../lib/math-layout-util';
+import { globalizePositions, movePosition, alignSubNodeToGlobalPosition } from '../../lib/math-layout-util';
 import { normalizeClamped, upDownSin, playAnimation, normSine } from '../../lib/util';
 import * as Vec2 from '../../lib/vector2';
 import { interpolateFormulas, normalizePathOrNodeSpecEntry, interpolateNodes, preProcessLerpSpecWithIds } from '../../src/interpolate-formula';
@@ -44,12 +44,12 @@ const test1 = () => {
 	const formula2 = {
 		type: "mathlist", style,
 		items: [
-			{ type: "ord", value: "a", id: "a" },
-			{ type: "bin", value: "*", id: "mul1" },
+			{ type: "ord", value: "a", id: "a", branchId: "a1" },
+			{ type: "bin", value: "*", id: "mul1", branchId: "mul11" },
 			{ type: "ord", value: "b", id: "b" },
 			{ type: "bin", value: "+", id: "plus" },
-			{ type: "ord", value: "a" },
-			{ type: "bin", value: "*" },
+			{ type: "ord", value: "a", id: "a", branchId: "a2" },
+			{ type: "bin", value: "*", id: "mul1", branchId: "mul12" },
 			{ type: "ord", value: "c", id: "c" }
 		]
 	};
@@ -59,7 +59,7 @@ const test1 = () => {
 	const items2 = boxFormula2.items;
 	const nodeCorrespondence = map(normalizePathOrNodeSpecEntry(boxFormula1, boxFormula2))(preProcessLerpSpecWithIds(formula1, formula2, [
 		{
-			from: items1[0], to: items2[4],
+			from: "a", to: "a2",
 			interpolate: (a, b, t) => {
 				return movePosition([
 					0, upDownSin(normalizeClamped(0.2, 0.95, t)) * 40
@@ -67,7 +67,7 @@ const test1 = () => {
 			}
 		},
 		{
-			from: items1[1], to: items2[5],
+			from: "mul1", to: "mul12",
 			interpolate: (a, b, t) => {
 				return movePosition([
 					0, upDownSin(normalizeClamped(0.1, 0.85, t)) * 40
@@ -95,201 +95,148 @@ const test1 = () => {
 const test2 = () => {
 	const preProcess = pipe(layoutFormula, setPosition([0, 0]), globalizePositions);
 
-	const node1 = pipe(preProcess, alignSubNodeToGlobalPosition(canvasCenter, ["items", 1]))({
-		type: "mathlist", style,
-		items: [
-			{
-				type: "fraction",
-				numerator: { type: "ord", value: "a" },
-				denominator: { type: "ord", value: "b" },
-			},
-			{ type: "bin", value: "+" },
-			{
-				type: "fraction",
-				numerator: { type: "ord", value: "c" },
-				denominator: { type: "ord", value: "d" },
-			}
-		]
-	});
-	const node2 = pipe(preProcess, alignSubNodeToGlobalPosition(canvasCenter, ["items", 1]))({
-		type: "mathlist", style,
-		items: [
-			{
-				type: "fraction",
-				numerator: {
-					type: "mathlist",
-					items: [
-						{ type: "ord", value: "a" },
-						{ type: "bin", value: "*" },
-						{ type: "ord", value: "d" }
-					]
-				},
-				denominator: {
-					type: "mathlist",
-					items: [
-						{ type: "ord", value: "b" },
-						{ type: "bin", value: "*" },
-						{ type: "ord", value: "d" }
-					]
-				}
-			},
-			{ type: "bin", value: "+" },
-			{
-				type: "fraction",
-				numerator: {
-					type: "mathlist",
-					items: [
-						{ type: "ord", value: "b" },
-						{ type: "bin", value: "*" },
-						{ type: "ord", value: "c" }
-					]
-				},
-				denominator: {
-					type: "mathlist",
-					items: [
-						{ type: "ord", value: "b" },
-						{ type: "bin", value: "*" },
-						{ type: "ord", value: "d" }
-					]
-				}
-			}
-		]
-	});
-	let node3 = pipe(preProcess)({
-		type: "fraction", style,
-		numerator: {
-			type: "mathlist",
+	const formulas = [
+		//a/b + c/d
+		{
+			type: "mathlist", style,
 			items: [
-				{ type: "ord", value: "a" },
-				{ type: "bin", value: "*" },
-				{ type: "ord", value: "d" },
-				{ type: "bin", value: "+" },
-				{ type: "ord", value: "b" },
-				{ type: "bin", value: "*" },
-				{ type: "ord", value: "c" },
+				{
+					type: "fraction",
+					numerator: { type: "ord", value: "a", id: "a" },
+					denominator: { type: "ord", value: "b", id: "b" },
+				},
+				{ type: "bin", value: "+", id: "plus1" },
+				{
+					type: "fraction",
+					numerator: { type: "ord", value: "c", id: "c" },
+					denominator: { type: "ord", value: "d", id: "d" },
+				}
 			]
 		},
-		denominator: {
-			type: "mathlist",
+
+		//a/b + b/b * c/d
+		{
+			type: "mathlist", style,
 			items: [
-				{ type: "ord", value: "b" },
+				{
+					type: "fraction",
+					numerator: { type: "ord", value: "a", id: "a" },
+					denominator: { type: "ord", value: "b", id: "b" },
+				},
+				{ type: "bin", value: "+", id: "plus1" },
+				{
+					type: "fraction",
+					numerator: { type: "ord", value: "b", id: "b", branchId: "numB" },
+					denominator: { type: "ord", value: "b", id: "b", branchId: "denomB" },
+				},
 				{ type: "bin", value: "*" },
-				{ type: "ord", value: "d" }
+				{
+					type: "fraction",
+					numerator: { type: "ord", value: "c", id: "c" },
+					denominator: { type: "ord", value: "d", id: "d" },
+				}
 			]
-		}
-	});
-	node3 = translateGlobalPositionedFormulaTree(
-		subtractVectors(
-			canvasCenter, [
-			view(lensPath(["numerator", "items", 3, "position", 0]))(node3),
-			view(lensPath(["rule", "position", 1]))(node3)
-		]
-		)
-	)(node3);
-
-	const nodeCorrespondence1 = [
-		{
-			from: node1.items[0].numerator,
-			to: node2.items[0].numerator.items[0]
-		},
-		{
-			from: node1.items[0].denominator,
-			to: node2.items[0].denominator.items[0]
-		},
-		{
-			from: node1.items[0].rule,
-			to: node2.items[0].rule
-		},
-		fadeIn(node2.items[0].denominator.items[1]),
-		{
-			from: node1.items[2].denominator,
-			to: node2.items[0].denominator.items[2]
-		},
-		fadeIn(node2.items[0].numerator.items[1]),
-		{
-			from: node1.items[2].denominator,
-			to: node2.items[0].numerator.items[2]
 		},
 
-		{ from: node1.items[1], to: node2.items[1] },
+		// {
+		// 	type: "mathlist", style,
+		// 	items: [
+		// 		{
+		// 			type: "fraction",
+		// 			numerator: {
+		// 				type: "mathlist",
+		// 				items: [
+		// 					{ type: "ord", value: "a" },
+		// 					{ type: "bin", value: "*" },
+		// 					{ type: "ord", value: "d" }
+		// 				]
+		// 			},
+		// 			denominator: {
+		// 				type: "mathlist",
+		// 				items: [
+		// 					{ type: "ord", value: "b" },
+		// 					{ type: "bin", value: "*" },
+		// 					{ type: "ord", value: "d" }
+		// 				]
+		// 			}
+		// 		},
+		// 		{ type: "bin", value: "+" },
+		// 		{
+		// 			type: "fraction",
+		// 			numerator: {
+		// 				type: "mathlist",
+		// 				items: [
+		// 					{ type: "ord", value: "b" },
+		// 					{ type: "bin", value: "*" },
+		// 					{ type: "ord", value: "c" }
+		// 				]
+		// 			},
+		// 			denominator: {
+		// 				type: "mathlist",
+		// 				items: [
+		// 					{ type: "ord", value: "b" },
+		// 					{ type: "bin", value: "*" },
+		// 					{ type: "ord", value: "d" }
+		// 				]
+		// 			}
+		// 		}
+		// 	]
+		// },
 
-		{
-			from: node1.items[2].numerator,
-			to: node2.items[2].numerator.items[2]
-		},
-		{
-			from: node1.items[2].denominator,
-			to: node2.items[2].denominator.items[2]
-		},
-		{
-			from: node1.items[2].rule,
-			to: node2.items[2].rule
-		},
-		fadeIn(node2.items[2].denominator.items[1]),
-		{
-			from: node1.items[0].denominator,
-			to: node2.items[2].denominator.items[0]
-		},
-		fadeIn(node2.items[2].numerator.items[1]),
-		{
-			from: node1.items[0].denominator,
-			to: node2.items[2].numerator.items[0]
-		},
+		// {
+		// 	type: "fraction", style,
+		// 	numerator: {
+		// 		type: "mathlist",
+		// 		items: [
+		// 			{ type: "ord", value: "a" },
+		// 			{ type: "bin", value: "*" },
+		// 			{ type: "ord", value: "d" },
+		// 			{ type: "bin", value: "+" },
+		// 			{ type: "ord", value: "b" },
+		// 			{ type: "bin", value: "*" },
+		// 			{ type: "ord", value: "c" },
+		// 		]
+		// 	},
+		// 	denominator: {
+		// 		type: "mathlist",
+		// 		items: [
+		// 			{ type: "ord", value: "b" },
+		// 			{ type: "bin", value: "*" },
+		// 			{ type: "ord", value: "d" }
+		// 		]
+		// 	}
+		// }
 	];
-	const nodeCorrespondence2 = [
-		...[0, 1, 2].map(ind => {
-			return {
-				from: node2.items[0].numerator.items[ind],
-				to: node3.numerator.items[ind]
-			}
-		}),
-		...[0, 1, 2].map(ind => {
-			return {
-				from: node2.items[2].numerator.items[ind],
-				to: node3.numerator.items[4 + ind]
-			}
-		}),
-		{
-			from: node2.items[1],
-			to: node3.numerator.items[3]
-		},
-		...[0, 1, 2].map(ind => {
-			return {
-				from: node2.items[0].denominator.items[ind],
-				to: node3.denominator.items[ind]
-			}
-		}),
-		...[0, 1, 2].map(ind => {
-			return {
-				from: node2.items[2].denominator.items[ind],
-				to: node3.denominator.items[ind]
-			}
-		}),
-		{
-			from: node2.items[0].rule,
-			to: node3.rule,
-			interpolateWidth: (a, b, t) => interpolate(a, b / 2, t)
-		},
-		{
-			from: node2.items[2].rule,
-			to: node3.rule,
-			interpolatePosition: (a, b, t) => [
-				interpolate(a[0], b[0] + node3.rule.dimensions.width / 2, t),
-				interpolate(a[1], b[1], t)
-			],
-			interpolateWidth: (a, b, t) => interpolate(a, b / 2, t)
-		},
+	const formulasLayouted = [
+		pipe(preProcess, alignSubNodeToGlobalPosition(canvasCenter, ["items", 1]))(formulas[0]),
+		pipe(preProcess, alignSubNodeToGlobalPosition(canvasCenter, ["items", 1]))(formulas[1]),
 	];
+
+	const corrSpec = preProcessLerpSpecWithIds(formulas[0], formulas[1], [
+		{ from: ["items", 0, "rule"], to: ["items", 0, "rule"] },
+		{ from: ["items", 2, "rule"], to: ["items", 4, "rule"] },
+		{ 
+			from: pipe(
+				setColor("transparent"), 
+				setPosition(formulasLayouted[0].items[0].denominator.position)
+			)(formulasLayouted[1].items[2].rule), 
+			to: setColor(style.color)(formulasLayouted[1].items[2].rule)
+		},
+	]);
+	console.log(corrSpec);
+	const lerpMap = map(normalizePathOrNodeSpecEntry(formulasLayouted[0], formulasLayouted[1]), corrSpec);
+	return interpolateFormulas(lerpMap);
 };
 
 const main = () => {
     
-	const lerp = test1();
+	const lerp = test2();
     let t = 0;
 
     const render = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 		ctx.save();
+		Object.assign(ctx, { strokeStyle: style.color, fillStyle: style.color });
 		ctx.setTransform(1, 0, 0, -1, 0, canvas.height);
 		const nodes = lerp(t);
 		nodes.forEach((node) => renderNode(ctx, node));
@@ -297,20 +244,20 @@ const main = () => {
     };
     render();
 
-    // document.body.insertAdjacentHTML("beforeend", `<input type="range" min="0" max="1" step="0.001" value="0" />`);
-    // document.querySelector("input").addEventListener("input", e => {
-    //     t = parseFloat(e.srcElement.value);
-    //     render();
-	// });
+    document.body.insertAdjacentHTML("beforeend", `<input type="range" min="0" max="1" step="0.001" value="0" />`);
+    document.querySelector("input").addEventListener("input", e => {
+        t = parseFloat(e.srcElement.value);
+        render();
+	});
 	
-	document.addEventListener("keydown", e => {
-		if (e.keyCode === 32){
-			playAnimation(2000, time => {
-				t = normSine(time);
-				render();
-			});
-		}
-	})
+	// document.addEventListener("keydown", e => {
+	// 	if (e.keyCode === 32){
+	// 		playAnimation(2000, time => {
+	// 			t = normSine(time);
+	// 			render();
+	// 		});
+	// 	}
+	// })
 
 };
 loadKatexFontFaces().then(main);
