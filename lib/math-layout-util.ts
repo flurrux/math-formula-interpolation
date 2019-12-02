@@ -57,9 +57,13 @@ export const mapFormulaTree = (map: ((node: BoxNode) => BoxNode)) => ((node: Box
 
 export const translateGlobalPositionedFormulaTree = (translation: Vector2) => mapFormulaTree(movePosition(translation));
 
-export const alignSubNodeToGlobalPosition = (position: Vector2, path: PropertyPath) => ((node: BoxNode) => {
+export const alignSubNodeToGlobalPosition = (position: Vector2, path: PropertyPath, normalizedAnchor: Vector2 = [0.5, 0]) => ((node: BoxNode) => {
     const subNode = viewPath(path)(node) as BoxNode;
-    const delta = subVectors(position, subNode.position);
+    const subNodePosition = addVectors(subNode.position, [
+        subNode.dimensions.width * normalizedAnchor[0],
+        (normalizedAnchor[1] > 0 ? subNode.dimensions.yMax : subNode.dimensions.yMin) * normalizedAnchor[1]
+    ])
+    const delta = subVectors(position, subNodePosition);
     return translateGlobalPositionedFormulaTree(delta)(node);
 });
 export const alignSubNodeToGlobalX = (x: number, path: PropertyPath) => ((node: BoxNode) => {

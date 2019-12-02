@@ -40,12 +40,13 @@ const traverseFormulaTree = (forEachFunc: ((node: FormulaNode) => void), node: F
 
 
 const getUniqueIdOfNode = (node: any) => node.branchId || node.id;
-const collectIdsSub = (idMap: IdPathMap, currentPath: PropertyPath, node: FormulaNode): IdPathMap => {
+const collectIdsSub = (idMap: IdPathMap, isFrom: boolean, currentPath: PropertyPath, node: FormulaNode): IdPathMap => {
 	if (isLeafNode(node)) {
-		const id = (node as any).id;
-		if (id !== undefined) {
+		const corrId = (node as any).corrId;
+		if (corrId !== undefined) {
+			const id = Array.isArray(corrId) ? corrId[isFrom ? 1 : 0] : corrId;
 			idMap = assocPath([id, idMap[id] ? idMap[id].length : 0], { 
-					path: currentPath, uniqueId: getUniqueIdOfNode(node) 
+					path: currentPath, uniqueId: ((node as any).uniqueId ||id)
 				}, idMap);
 		}
 	}
@@ -53,9 +54,9 @@ const collectIdsSub = (idMap: IdPathMap, currentPath: PropertyPath, node: Formul
 		const childPaths = getChildPaths(node);
 		for (const childPath of childPaths) {
 			const childNode = view(lensPath(childPath))(node) as FormulaNode;
-			idMap = collectIdsSub(idMap, [...currentPath, ...childPath], childNode);
+			idMap = collectIdsSub(idMap, isFrom, [...currentPath, ...childPath], childNode);
 		}
 	}
 	return idMap;
 };
-export const collectIds = (node: FormulaNode): IdPathMap => collectIdsSub({}, [], node);
+export const collectIds = (node: FormulaNode, isFrom: boolean): IdPathMap => collectIdsSub({}, isFrom, [], node);

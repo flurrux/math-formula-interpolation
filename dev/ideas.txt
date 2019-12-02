@@ -15,7 +15,9 @@ transition cases:
 - specfiy node correspondence
     - explicitly write them out as object: { from: node1, to: node2 }
     - specify the path: { from: [["items", 2], "numerator", ["items", 1]], to: ... }
-    - specify an id in the formula, 
-    for interpolation functions write then: { id: [some-id], interpolate: [some-function] }
-    if a node branches into mutliple, the ids are not unique anymore. in that case use a 
-    second id, branchId, that takes precedence over the first id. 
+    - specify ids in the node: 
+        { corrId: [leftId, rightId] | singleId, (opt) uniqueId } 
+        correspondences are either to the "left" or "right" direction. 
+        if two nodes have the same corrId, they correspond. 
+        corrIds need not be unique, so in a case where they are not unique, 
+        use uniqueId to setup a custom interpolation-function.
