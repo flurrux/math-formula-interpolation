@@ -9,6 +9,9 @@ import { PropertyPath } from '../lib/types';
 
 //types #######
 
+
+
+
 type InterpolatableNodeType = "char" | "text" | "contours" | "rule";
 interface InterpolatableNode extends BoxNode {
     type: InterpolatableNodeType
@@ -57,6 +60,7 @@ const createCorrespondenceFromIds = (from: FormulaNode, to: FormulaNode) => {
 	const fromIdMap = collectIds(from, true);
 	const toIdMap = collectIds(to, false);	
 	const ids = Reflect.ownKeys(fromIdMap) as string[];	
+	console.log(fromIdMap, toIdMap);
 	for (const id of ids) {
 		const fromPaths = fromIdMap[id];
 		const toPaths = toIdMap[id];

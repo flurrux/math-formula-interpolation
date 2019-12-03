@@ -21,3 +21,11 @@ transition cases:
         if two nodes have the same corrId, they correspond. 
         corrIds need not be unique, so in a case where they are not unique, 
         use uniqueId to setup a custom interpolation-function.
+
+- specify transition for a group of nodes
+    - specify the ids of the source group and the target group
+    - specify the id of the parent and then all the sub-nodes will be selected
+
+- some nodes only appear after layout like: rule of a fraction, radical of root. 
+to equip a rule with an id: { type: "fraction", rule: { corrId: "rule1" } }, and similar with the radical.
+

@@ -6,7 +6,7 @@ import { setPosition } from '@flurrux/math-layout-engine/src/layout/layout-util'
 import { renderNode } from '@flurrux/math-layout-engine/src/rendering/render';
 import { assocPath, map, pipe, range } from 'ramda';
 import { globalizePositions, movePosition, alignSubNodeToGlobalPosition } from '../../lib/math-layout-util';
-import { normalizeClamped, upDownSin, playAnimation, normSine } from '../../lib/util';
+import { normalizeClamped, upDownSin, playAnimation, normSine, viewPath } from '../../lib/util';
 import * as Vec2 from '../../lib/vector2';
 import { interpolateFormulas, normalizePathOrNodeSpecEntry, interpolateNodes, preProcessLerpSpecWithIds } from '../../src/interpolate-formula';
 
@@ -18,6 +18,20 @@ const mergeRules = (toRule, startPoint, endPoint) => (fromRule => {
 	)(fromRule);
 });
 
+const getOriginPoint = (formula, layoutedFormula) => {
+	const findOriginMarkerPath = (parentNode, currentPath) => {
+
+	};
+	const path = findOriginMarkerPath(formula);
+	const formulaNode = viewPath(path)(formula);
+	const boxNode = viewPath(path)(layoutedFormula);
+	const localPoint = [
+		node.dimensions.width * formulaNode.globalOrigin[0],
+		(formulaNode.globalOrigin[1] > 0 ? boxNode.dimensions.yMax : boxNode.dimensions.yMin) * formulaNode.globalOrigin[1]
+	];
+	return viewPath([...path, "position"])(layoutedFormula);
+};
+
 
 const canvas = document.querySelector("canvas");
 const ctx = canvas.getContext("2d");
@@ -26,7 +40,7 @@ const style = {
 	type: "D",
 	fontSize: 40,
 	color: "white",
-	preventPixelSnapping: true
+	preventTextPixelSnapping: true
 };
 
 const test1 = () => {
@@ -113,9 +127,10 @@ const test2 = () => {
 				{
 					type: "fraction",
 					numerator: { type: "ord", value: "a", corrId: "a" },
+					rule: { type: "rule", corrId: "rule1" },
 					denominator: { type: "ord", value: "b", corrId: "b" },
 				},
-				{ type: "bin", value: "+", corrId: "plus1" },
+				{ type: "bin", value: "+", corrId: "plus1", globalOrigin: [0.5, 0] },
 				{
 					type: "fraction",
 					numerator: { type: "ord", value: "c", corrId: "c" },
@@ -131,6 +146,7 @@ const test2 = () => {
 				{
 					type: "fraction",
 					numerator: { type: "ord", value: "a", corrId: "a" },
+					rule: { type: "rule", corrId: "rule1" },
 					denominator: { type: "ord", value: "b", corrId: "b" },
 				},
 
@@ -265,7 +281,7 @@ const test2 = () => {
 
 	const correspondences = [
 		[
-			{ from: ["items", 0, "rule"], to: ["items", 0, "rule"] },
+			// { from: ["items", 0, "rule"], to: ["items", 0, "rule"] },
 
 			{ id: "c", interpolate: reTimeSined(0.5, 1) },
 			{ id: "d", interpolate: reTimeSined(0.5, 1) },
@@ -288,83 +304,83 @@ const test2 = () => {
 			}
 		],
 
-		[
-			{ id: "a", interpolate: reTimeSined(0.5, 1) },
-			{ id: "b", interpolate: reTimeSined(0.5, 1) },
-			{ from: ["items", 0, "rule"], to: ["items", 0, "rule"], interpolate: reTimeSined(0.5, 1) },
+		// [
+		// 	{ id: "a", interpolate: reTimeSined(0.5, 1) },
+		// 	{ id: "b", interpolate: reTimeSined(0.5, 1) },
+		// 	{ from: ["items", 0, "rule"], to: ["items", 0, "rule"], interpolate: reTimeSined(0.5, 1) },
 
-			{ from: ["items", 4, "rule"], to: ["items", 6, "rule"] },
-			{ from: ["items", 2, "rule"], to: ["items", 4, "rule"] },
-			{ 
-				from: pipe(
-					setColor("transparent"), 
-					setPosition(formulasLayouted[1].items[4].denominator.position)
-				)(formulasLayouted[2].items[2].rule), 
-				to: setColor(style.color)(formulasLayouted[2].items[2].rule)
-			},
-			{
-				from: pipe(
-					setColor("transparent"), 
-					setPosition(formulasLayouted[1].items[4].denominator.position)
-				)(formulasLayouted[2].items[1]), 
-				to: setColor(style.color)(formulasLayouted[2].items[1])
-			}
-		],
+		// 	{ from: ["items", 4, "rule"], to: ["items", 6, "rule"] },
+		// 	{ from: ["items", 2, "rule"], to: ["items", 4, "rule"] },
+		// 	{ 
+		// 		from: pipe(
+		// 			setColor("transparent"), 
+		// 			setPosition(formulasLayouted[1].items[4].denominator.position)
+		// 		)(formulasLayouted[2].items[2].rule), 
+		// 		to: (formulasLayouted[2].items[2].rule)
+		// 	},
+		// 	{
+		// 		from: pipe(
+		// 			setColor("transparent"), 
+		// 			setPosition(formulasLayouted[1].items[4].denominator.position)
+		// 		)(formulasLayouted[2].items[1]), 
+		// 		to: (formulasLayouted[2].items[1])
+		// 	}
+		// ],
 
-		[
-			{
-				from: setColor(style.color)(formulasLayouted[2].items[0].rule),
-				to: pipe(
-					setColor(style.color),
-					mergeRules(formulasLayouted[3].items[0].rule, 0, 0.5)
-				)(formulasLayouted[2].items[0].rule)
-			},
-			{
-				from: setColor(style.color)(formulasLayouted[2].items[2].rule),
-				to: pipe(
-					setColor(style.color),
-					mergeRules(formulasLayouted[3].items[0].rule, 0.5, 1)
-				)(formulasLayouted[2].items[2].rule)
-			},
-			{
-				from: setColor(style.color)(formulasLayouted[2].items[4].rule),
-				to: pipe(
-					setColor(style.color),
-					mergeRules(formulasLayouted[3].items[2].rule, 0, 0.5)
-				)(formulasLayouted[2].items[4].rule)
-			},
-			{
-				from: setColor(style.color)(formulasLayouted[2].items[6].rule),
-				to: pipe(
-					setColor(style.color),
-					mergeRules(formulasLayouted[3].items[2].rule, 0.5, 1)
-				)(formulasLayouted[2].items[6].rule)
-			}
-		],
+		// [
+		// 	{
+		// 		from: setColor(style.color)(formulasLayouted[2].items[0].rule),
+		// 		to: pipe(
+		// 			setColor(style.color),
+		// 			mergeRules(formulasLayouted[3].items[0].rule, 0, 0.5)
+		// 		)(formulasLayouted[2].items[0].rule)
+		// 	},
+		// 	{
+		// 		from: setColor(style.color)(formulasLayouted[2].items[2].rule),
+		// 		to: pipe(
+		// 			setColor(style.color),
+		// 			mergeRules(formulasLayouted[3].items[0].rule, 0.5, 1)
+		// 		)(formulasLayouted[2].items[2].rule)
+		// 	},
+		// 	{
+		// 		from: setColor(style.color)(formulasLayouted[2].items[4].rule),
+		// 		to: pipe(
+		// 			setColor(style.color),
+		// 			mergeRules(formulasLayouted[3].items[2].rule, 0, 0.5)
+		// 		)(formulasLayouted[2].items[4].rule)
+		// 	},
+		// 	{
+		// 		from: setColor(style.color)(formulasLayouted[2].items[6].rule),
+		// 		to: pipe(
+		// 			setColor(style.color),
+		// 			mergeRules(formulasLayouted[3].items[2].rule, 0.5, 1)
+		// 		)(formulasLayouted[2].items[6].rule)
+		// 	}
+		// ],
 
-		[
-			{
-				from: setColor(style.color)(formulasLayouted[3].items[0].rule),
-				to: pipe(
-					setColor(style.color),
-					mergeRules(formulasLayouted[4].rule, 0, 0.5)
-				)(formulasLayouted[3].items[0].rule)
-			},
-			{
-				from: setColor(style.color)(formulasLayouted[3].items[2].rule),
-				to: pipe(
-					setColor(style.color),
-					mergeRules(formulasLayouted[4].rule, 0.5, 1)
-				)(formulasLayouted[3].items[2].rule)
-			}
-		]
+		// [
+		// 	{
+		// 		from: setColor(style.color)(formulasLayouted[3].items[0].rule),
+		// 		to: pipe(
+		// 			setColor(style.color),
+		// 			mergeRules(formulasLayouted[4].rule, 0, 0.5)
+		// 		)(formulasLayouted[3].items[0].rule)
+		// 	},
+		// 	{
+		// 		from: setColor(style.color)(formulasLayouted[3].items[2].rule),
+		// 		to: pipe(
+		// 			setColor(style.color),
+		// 			mergeRules(formulasLayouted[4].rule, 0.5, 1)
+		// 		)(formulasLayouted[3].items[2].rule)
+		// 	}
+		// ]
 	];
 
 	const lerpMaps = map(ind => {
 		const corrSpec = preProcessLerpSpecWithIds(formulas[ind], formulas[ind + 1], correspondences[ind]);
 		const lerpMap = map(normalizePathOrNodeSpecEntry(formulasLayouted[ind], formulasLayouted[ind + 1]), corrSpec);
 		return interpolateFormulas(lerpMap);
-	})(range(0, formulas.length - 1));
+	})(range(0, 1));
 
 	const lerp = t => {
 		const ind = Math.min(correspondences.length - 1, Math.floor(t));

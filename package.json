@@ -11,7 +11,7 @@
   "author": "Christian Hoffmann <christianhoffmann@outlook.com>",
   "license": "ISC",
   "dependencies": {
-    "@flurrux/math-layout-engine": "^1.0.3",
+    "@flurrux/math-layout-engine": "^1.0.4",
     "color-rgba": "^2.1.1",
     "ramda": "^0.26.1"
   },
