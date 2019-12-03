@@ -4,33 +4,51 @@
 import { layoutFormula, loadKatexFontFaces } from '@flurrux/math-layout-engine';
 import { setPosition } from '@flurrux/math-layout-engine/src/layout/layout-util';
 import { renderNode } from '@flurrux/math-layout-engine/src/rendering/render';
-import { assocPath, map, pipe, range } from 'ramda';
-import { globalizePositions, movePosition, alignSubNodeToGlobalPosition } from '../../lib/math-layout-util';
+import { assocPath, map, pipe, range, identity } from 'ramda';
+import { 
+	globalizePositions, movePosition, alignToMarkedSubNode, translateGlobalPositionedFormulaTree, setColor, lookUpPathById 
+} from '../../lib/math-layout-util';
 import { normalizeClamped, upDownSin, playAnimation, normSine, viewPath } from '../../lib/util';
 import * as Vec2 from '../../lib/vector2';
-import { interpolateFormulas, normalizePathOrNodeSpecEntry, interpolateNodes, preProcessLerpSpecWithIds } from '../../src/interpolate-formula';
+import { 
+	interpolateFormulas, normalizePathOrNodeSpecEntry, interpolateNodes, preProcessLerpSpecWithIds 
+} from '../../src/interpolate-formula';
 
-const setColor = (color) => assocPath(["style", "color"], color);
+
+
+const lookUpNodeById = (id, formula, layouted) => viewPath(lookUpPathById(id, formula))(layouted);
 const mergeRules = (toRule, startPoint, endPoint) => (fromRule => {
 	return pipe(
 		assocPath(["position"], Vec2.add(toRule.position, [toRule.dimensions.width * startPoint, 0])),
 		assocPath(["dimensions", "width"], (endPoint - startPoint) * toRule.dimensions.width)
 	)(fromRule);
 });
-
-const getOriginPoint = (formula, layoutedFormula) => {
-	const findOriginMarkerPath = (parentNode, currentPath) => {
-
-	};
-	const path = findOriginMarkerPath(formula);
-	const formulaNode = viewPath(path)(formula);
-	const boxNode = viewPath(path)(layoutedFormula);
-	const localPoint = [
-		node.dimensions.width * formulaNode.globalOrigin[0],
-		(formulaNode.globalOrigin[1] > 0 ? boxNode.dimensions.yMax : boxNode.dimensions.yMin) * formulaNode.globalOrigin[1]
-	];
-	return viewPath([...path, "position"])(layoutedFormula);
+const mergeRulesById = (fromIds, toId, startPoints, formula1, layouted1, formula2, layouted2) => {
+	const fromRules = fromIds.map(id => viewPath(lookUpPathById(id, formula1))(layouted1));
+	const toRule = viewPath(lookUpPathById(toId, formula2))(layouted2);
+	const rulePoints = [...startPoints, 1];
+	return fromRules.map((fromRule, index) => {
+		return {
+			from: fromRule,
+			to: mergeRules(toRule, rulePoints[index], rulePoints[index + 1])(fromRule)
+		}
+	});
 };
+
+const fadeInFromPosition = (id, positionNodeId, formula1, layouted1, formula2, layouted2) => {
+	const node = lookUpNodeById(id, formula2, layouted2);
+	const positionNode = lookUpNodeById(positionNodeId, formula1, layouted1);
+	return {
+		from: pipe(
+			setColor("transparent"),
+			setPosition(positionNode.position)
+		)(node),
+		to: node
+	}
+};
+
+
+
 
 
 const canvas = document.querySelector("canvas");
@@ -114,10 +132,19 @@ const test1 = () => {
 };
 
 const test2 = () => {
-	const preProcess = pipe(layoutFormula, setPosition([0, 0]), globalizePositions);
+	const preProcess = (formula) => pipe(
+		layoutFormula, 
+		setPosition([0, 0]), 
+		globalizePositions, 
+		alignToMarkedSubNode(formula),
+		translateGlobalPositionedFormulaTree(canvasCenter)
+	)(formula);
+	
 	const reTimeLerp = (startTime, endTime) => ((a, b, t) => interpolateNodes(a, b, normalizeClamped(startTime, endTime, t)));
 	const normSined = func => ((a, b, t) => func(a, b, normSine(t)));
 	const reTimeSined = (startTime, endTime) => ((a, b, t) => interpolateNodes(a, b, normSine(normalizeClamped(startTime, endTime, t))));
+	const idToSmoothTimeOffsetLerp = (startTime, endTime) => (id => identity({ id, interpolate: reTimeSined(startTime, endTime) }));
+	const plusAxisCenter = [0.5, 0.42857387756501464];
 
 	const formulas = [
 		//a/b + c/d
@@ -130,10 +157,11 @@ const test2 = () => {
 					rule: { type: "rule", corrId: "rule1" },
 					denominator: { type: "ord", value: "b", corrId: "b" },
 				},
-				{ type: "bin", value: "+", corrId: "plus1", globalOrigin: [0.5, 0] },
+				{ type: "bin", value: "+", corrId: "plus1", globalOrigin: plusAxisCenter },
 				{
 					type: "fraction",
 					numerator: { type: "ord", value: "c", corrId: "c" },
+					rule: { type: "rule", corrId: "rule2" },
 					denominator: { type: "ord", value: "d", corrId: "d" },
 				}
 			]
@@ -150,17 +178,19 @@ const test2 = () => {
 					denominator: { type: "ord", value: "b", corrId: "b" },
 				},
 
-				{ type: "bin", value: "+", corrId: "plus1" },
+				{ type: "bin", value: "+", corrId: "plus1", globalOrigin: plusAxisCenter },
 				
 				{
 					type: "fraction",
 					numerator: { type: "ord", value: "b", corrId: ["b", "numB"] },
+					rule: {  type: "rule", corrId: "rule3" },
 					denominator: { type: "ord", value: "b", corrId: ["b", "denomB"] },
 				},
 				{ type: "bin", value: "*", corrId: "mul1" },
 				{
 					type: "fraction",
 					numerator: { type: "ord", value: "c", corrId: "c" },
+					rule: { type: "rule", corrId: "rule2" },
 					denominator: { type: "ord", value: "d", corrId: "d" },
 				}
 			]
@@ -173,26 +203,30 @@ const test2 = () => {
 				{
 					type: "fraction",
 					numerator: { type: "ord", value: "a", corrId: "a" },
+					rule: { type: "rule", corrId: "rule1" },
 					denominator: { type: "ord", value: "b", corrId: "b" },
 				},
 				{ type: "bin", value: "*", corrId: "mul2" },
 				{
 					type: "fraction",
 					numerator: { type: "ord", value: "d", corrId: ["d", "numD"] },
+					rule: {  type: "rule", corrId: "rule4" },
 					denominator: { type: "ord", value: "d", corrId: ["d", "denomD"] },
 				},
 
-				{ type: "bin", value: "+", corrId: "plus1" },
+				{ type: "bin", value: "+", corrId: "plus1", globalOrigin: plusAxisCenter },
 
 				{
 					type: "fraction",
 					numerator: { type: "ord", value: "b", corrId: "numB" },
+					rule: {  type: "rule", corrId: "rule3" },
 					denominator: { type: "ord", value: "b", corrId: "denomB" },
 				},
 				{ type: "bin", value: "*", corrId: "mul1" },
 				{
 					type: "fraction",
 					numerator: { type: "ord", value: "c", corrId: "c" },
+					rule: { type: "rule", corrId: "rule2" },
 					denominator: { type: "ord", value: "d", corrId: "d" },
 				}
 			]
@@ -212,6 +246,7 @@ const test2 = () => {
 							{ type: "ord", value: "d", corrId: "numD" }
 						]
 					},
+					rule: {  type: "rule", corrId: "rule5" },
 					denominator: { 
 						type: "mathlist",
 						items: [
@@ -222,7 +257,7 @@ const test2 = () => {
 					}
 				},
 				
-				{ type: "bin", value: "+", corrId: "plus1" },
+				{ type: "bin", value: "+", corrId: "plus1", globalOrigin: plusAxisCenter },
 
 				{
 					type: "fraction",
@@ -234,6 +269,7 @@ const test2 = () => {
 							{ type: "ord", value: "c", corrId: "c" }
 						]
 					},
+					rule: {  type: "rule", corrId: "rule6" },
 					denominator: { 
 						type: "mathlist",
 						items: [
@@ -261,6 +297,7 @@ const test2 = () => {
 					{ type: "ord", value: "c", corrId: "c" }
 				]
 			},
+			rule: { type: "rule", corrId: "rule7", globalOrigin: [0.5, 0] },
 			denominator: {
 				type: "mathlist",
 				items: [
@@ -271,116 +308,36 @@ const test2 = () => {
 			}
 		},
 	];
-	const formulasLayouted = [
-		pipe(preProcess, alignSubNodeToGlobalPosition(canvasCenter, ["items", 1]))(formulas[0]),
-		pipe(preProcess, alignSubNodeToGlobalPosition(canvasCenter, ["items", 1]))(formulas[1]),
-		pipe(preProcess, alignSubNodeToGlobalPosition(canvasCenter, ["items", 3]))(formulas[2]),
-		pipe(preProcess, alignSubNodeToGlobalPosition(canvasCenter, ["items", 1]))(formulas[3]),
-		pipe(preProcess, alignSubNodeToGlobalPosition(canvasCenter, ["rule"]))(formulas[4])
-	];
+	const formulasLayouted = map(preProcess, formulas); 
 
 	const correspondences = [
 		[
-			// { from: ["items", 0, "rule"], to: ["items", 0, "rule"] },
-
-			{ id: "c", interpolate: reTimeSined(0.5, 1) },
-			{ id: "d", interpolate: reTimeSined(0.5, 1) },
-			{ from: ["items", 2, "rule"], to: ["items", 4, "rule"], interpolate: reTimeSined(0.5, 1) },
-
-
-			{ 
-				from: pipe(
-					setColor("transparent"), 
-					setPosition(formulasLayouted[0].items[0].denominator.position)
-				)(formulasLayouted[1].items[2].rule), 
-				to: setColor(style.color)(formulasLayouted[1].items[2].rule)
-			},
-			{
-				from: pipe(
-					setColor("transparent"), 
-					setPosition(formulasLayouted[0].items[0].denominator.position)
-				)(formulasLayouted[1].items[3]), 
-				to: setColor(style.color)(formulasLayouted[1].items[3])
-			}
+			...["c", "d", "rule2"].map(idToSmoothTimeOffsetLerp(0.5, 1)),
+			fadeInFromPosition("rule3", "b", formulas[0], formulasLayouted[0], formulas[1], formulasLayouted[1]),
+			fadeInFromPosition("mul1", "b", formulas[0], formulasLayouted[0], formulas[1], formulasLayouted[1]),
 		],
 
-		// [
-		// 	{ id: "a", interpolate: reTimeSined(0.5, 1) },
-		// 	{ id: "b", interpolate: reTimeSined(0.5, 1) },
-		// 	{ from: ["items", 0, "rule"], to: ["items", 0, "rule"], interpolate: reTimeSined(0.5, 1) },
-
-		// 	{ from: ["items", 4, "rule"], to: ["items", 6, "rule"] },
-		// 	{ from: ["items", 2, "rule"], to: ["items", 4, "rule"] },
-		// 	{ 
-		// 		from: pipe(
-		// 			setColor("transparent"), 
-		// 			setPosition(formulasLayouted[1].items[4].denominator.position)
-		// 		)(formulasLayouted[2].items[2].rule), 
-		// 		to: (formulasLayouted[2].items[2].rule)
-		// 	},
-		// 	{
-		// 		from: pipe(
-		// 			setColor("transparent"), 
-		// 			setPosition(formulasLayouted[1].items[4].denominator.position)
-		// 		)(formulasLayouted[2].items[1]), 
-		// 		to: (formulasLayouted[2].items[1])
-		// 	}
-		// ],
-
-		// [
-		// 	{
-		// 		from: setColor(style.color)(formulasLayouted[2].items[0].rule),
-		// 		to: pipe(
-		// 			setColor(style.color),
-		// 			mergeRules(formulasLayouted[3].items[0].rule, 0, 0.5)
-		// 		)(formulasLayouted[2].items[0].rule)
-		// 	},
-		// 	{
-		// 		from: setColor(style.color)(formulasLayouted[2].items[2].rule),
-		// 		to: pipe(
-		// 			setColor(style.color),
-		// 			mergeRules(formulasLayouted[3].items[0].rule, 0.5, 1)
-		// 		)(formulasLayouted[2].items[2].rule)
-		// 	},
-		// 	{
-		// 		from: setColor(style.color)(formulasLayouted[2].items[4].rule),
-		// 		to: pipe(
-		// 			setColor(style.color),
-		// 			mergeRules(formulasLayouted[3].items[2].rule, 0, 0.5)
-		// 		)(formulasLayouted[2].items[4].rule)
-		// 	},
-		// 	{
-		// 		from: setColor(style.color)(formulasLayouted[2].items[6].rule),
-		// 		to: pipe(
-		// 			setColor(style.color),
-		// 			mergeRules(formulasLayouted[3].items[2].rule, 0.5, 1)
-		// 		)(formulasLayouted[2].items[6].rule)
-		// 	}
-		// ],
-
-		// [
-		// 	{
-		// 		from: setColor(style.color)(formulasLayouted[3].items[0].rule),
-		// 		to: pipe(
-		// 			setColor(style.color),
-		// 			mergeRules(formulasLayouted[4].rule, 0, 0.5)
-		// 		)(formulasLayouted[3].items[0].rule)
-		// 	},
-		// 	{
-		// 		from: setColor(style.color)(formulasLayouted[3].items[2].rule),
-		// 		to: pipe(
-		// 			setColor(style.color),
-		// 			mergeRules(formulasLayouted[4].rule, 0.5, 1)
-		// 		)(formulasLayouted[3].items[2].rule)
-		// 	}
-		// ]
+		[
+			...["a", "b", "rule1"].map(idToSmoothTimeOffsetLerp(0.5, 1)),
+			fadeInFromPosition("rule4", "d", formulas[1], formulasLayouted[1], formulas[2], formulasLayouted[2]),
+			fadeInFromPosition("mul2", "d", formulas[1], formulasLayouted[1], formulas[2], formulasLayouted[2]),
+		],
+		
+		[
+			...mergeRulesById(["rule1", "rule4"], "rule5", [0, 0.5], formulas[2], formulasLayouted[2], formulas[3], formulasLayouted[3]),
+			...mergeRulesById(["rule3", "rule2"], "rule6", [0, 0.5], formulas[2], formulasLayouted[2], formulas[3], formulasLayouted[3]),
+		],
+		
+		[
+			...mergeRulesById(["rule5", "rule6"], "rule7", [0, 0.5], formulas[3], formulasLayouted[3], formulas[4], formulasLayouted[4])
+		]
 	];
 
 	const lerpMaps = map(ind => {
 		const corrSpec = preProcessLerpSpecWithIds(formulas[ind], formulas[ind + 1], correspondences[ind]);
 		const lerpMap = map(normalizePathOrNodeSpecEntry(formulasLayouted[ind], formulasLayouted[ind + 1]), corrSpec);
 		return interpolateFormulas(lerpMap);
-	})(range(0, 1));
+	})(range(0, correspondences.length));
 
 	const lerp = t => {
 		const ind = Math.min(correspondences.length - 1, Math.floor(t));

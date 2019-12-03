@@ -3,7 +3,7 @@ import { Style } from '@flurrux/math-layout-engine/src/style';
 import { FormulaNode, BoxNode, Dimensions } from '@flurrux/math-layout-engine/src/types';
 import { fromPairs, identity, map, reduce, assoc, assocPath, merge, omit } from 'ramda';
 import { interpolate, viewPath, normSine } from '../lib/util';
-import { interpolate as lerpVectors } from '../lib/vector2';
+import { interpolate as lerpVectors, add as addVecs, Vector2 } from '../lib/vector2';
 import { collectIds, IdPathMap } from '../lib/id-correspondence';
 import { PropertyPath } from '../lib/types';
 
@@ -60,10 +60,9 @@ const createCorrespondenceFromIds = (from: FormulaNode, to: FormulaNode) => {
 	const fromIdMap = collectIds(from, true);
 	const toIdMap = collectIds(to, false);	
 	const ids = Reflect.ownKeys(fromIdMap) as string[];	
-	console.log(fromIdMap, toIdMap);
 	for (const id of ids) {
-		const fromPaths = fromIdMap[id];
-		const toPaths = toIdMap[id];
+		const fromPaths = fromIdMap[id] || [];
+		const toPaths = toIdMap[id] || [];
 
 		//this is a double-loop because it's easier than to write out all the cases
 		//case 1: single -> single
