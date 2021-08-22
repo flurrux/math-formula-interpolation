@@ -6,17 +6,21 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "parcel build index.html",
-    "prepublish": "npm run build"
+    "prepublish": "npm run build",
+    "start": "parcel ./dev/test/index.html"
   },
   "author": "Christian Hoffmann <christianhoffmann@outlook.com>",
   "license": "ISC",
   "dependencies": {
     "@flurrux/math-layout-engine": "^1.0.3",
+    "@parcel/config-default": "^2.0.0-rc.0",
+    "@parcel/resolver-glob": "^2.0.0-nightly.2338",
     "color-rgba": "^2.1.1",
     "ramda": "^0.26.1"
   },
   "devDependencies": {
     "cssnano": "^4.1.10",
+    "parcel": "^2.0.0-rc.0",
     "typescript": "^3.7.2"
   }
 }
