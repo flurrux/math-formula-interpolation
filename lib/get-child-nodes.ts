@@ -68,13 +68,13 @@ export function getLayoutChildNodes(node: BoxNode): BoxNode[] {
 	return [];
 }
 
-export function getLayoutChildPaths(node: FormulaNode): PropertyPath[] {
-	if (isMathList(node)) return node.items.map((v, j) => ["items", j]);
-	if (isScript(node)) return [["nucleus"], ["sup"], ["sub"]];
-	if (isFraction(node)) return [["numerator"], ["denominator"], ["rule"]];
-	if (isRoot(node)) return [["radicand"], ["radical"], ["index"]];
-	if (isAccented(node)) return [["nucleus"], ["accent"]];
-	if (isDelimited(node)) return [["leftDelim"], ["delimited"], ["rightDelim"]];
-	if (isMatrix(node)) return node.items.map((v, j) => ["items", j]);
+export function getLayoutChildPaths(node: BoxNode): PropertyPath[] {
+	if (isMathListLayout(node)) return node.items.map((v, j) => ["items", j]);
+	if (isScriptLayout(node)) return [["nucleus"], ["sup"], ["sub"]];
+	if (isFractionLayout(node)) return [["numerator"], ["denominator"], ["rule"]];
+	if (isRootLayout(node)) return [["radicand"], ["radical"], ["index"]];
+	if (isAccentedLayout(node)) return [["nucleus"], ["accent"]];
+	if (isDelimitedLayout(node)) return [["leftDelim"], ["delimited"], ["rightDelim"]];
+	if (isMatrixLayout(node)) return node.items.map((v, j) => ["items", j]);
 	return [];
 }

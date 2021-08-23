@@ -4,14 +4,12 @@ import { isMathList } from './type-guards';
 
 type TransformFunc<B extends BoxNode> = (formulaNode: FormulaNode, boxNode: B) => B;
 
-export const transformWithFormulaNode = <B extends BoxNode>(transformFunc: TransformFunc<B>) => (formulaNode: FormulaNode, boxNode: B): B => {
+export const transformWithFormulaNode = <B extends BoxNode>(transformFunc: TransformFunc<B>) => (formulaNode: FormulaNode) => (boxNode: B): B => {
 	boxNode = transformFunc(formulaNode, boxNode);
 	const subT = transformWithFormulaNode(transformFunc);
 	if (isMathList(formulaNode)){
 		boxNode.items = formulaNode.items.map(
-			(formularChild, j) => subT(
-				formularChild, boxNode.items[j]
-			)
+			(formularChild, j) => subT(formularChild)(boxNode.items[j])
 		)
 	}
 	else {
@@ -22,7 +20,7 @@ export const transformWithFormulaNode = <B extends BoxNode>(transformFunc: Trans
 				const formulaChild = formulaNode[childKey];
 				const layoutChild = boxNode[childKey];
 				if (!formulaChild || !layoutChild) continue;
-				boxNode[childKey] = subT(formulaChild, layoutChild);
+				boxNode[childKey] = subT(formulaChild)(layoutChild);
 			}
 		}
 	}

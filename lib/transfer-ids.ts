@@ -9,11 +9,21 @@ function transferId<B extends BoxNode>(formulaNode: FormulaNode, layoutNode: B):
 
 	if (isFraction(formulaNode)){
 		const { ruleId } = formulaNode;
-		if (ruleId) layoutNode.ruleId = ruleId;
+		if (ruleId){
+			layoutNode.rule = {
+				...layoutNode.rule,
+				id: ruleId
+			};
+		} 
 	}
 	else if (isRoot(formulaNode)) {
 		const { radicalId } = formulaNode;
-		if (radicalId) layoutNode.radicalId = radicalId;
+		if (radicalId){
+			layoutNode.radical = {
+				...layoutNode.radical,
+				id: radicalId
+			};
+		} 
 	}
 
 	return layoutNode;

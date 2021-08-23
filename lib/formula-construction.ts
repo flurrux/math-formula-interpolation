@@ -1,15 +1,11 @@
 import { AccentNode, CharNode, DelimitedNode, FormulaNode, FractionNode, MathListNode, RootNode, ScriptNode, TextNode, TextualType } from "@flurrux/math-layout-engine/src/types";
 import { unicodeToTypeMap } from "@flurrux/math-layout-engine/src/type-from-unicode";
+import { OptId, WithId } from "./with-id";
 
 const getNodeTypeByUnicode = (unicode: number): TextualType => {
 	return unicodeToTypeMap[unicode] || "ord";
 };
 
-type OptId = string | undefined;
-
-type WithId<T> = T & {
-	id: OptId,
-};
 
 export function char(value: string, id: string = undefined): WithId<CharNode> {
 	const unicode = value.charCodeAt(0);
@@ -71,7 +67,7 @@ export function accented(nucleus: FormulaNode, accent: CharNode, id: string = un
 	}
 };
 
-export function root(radicand: FormulaNode, index: FormulaNode | undefined, id: string = undefined, radicalId: OptId = undefined): WithId<RootNode> & { radicalId: OptId } {
+export function root(radicand: FormulaNode, index: FormulaNode = undefined, id: string = undefined, radicalId: OptId = undefined): WithId<RootNode> & { radicalId: OptId } {
 	return {
 		id, radicalId,
 		type: "root",

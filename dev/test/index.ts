@@ -1,1 +1,2 @@
-import './id-transfer-test';
+// import './id-transfer-test';
+import './interpolation-test';
