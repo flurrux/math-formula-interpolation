@@ -1,7 +1,7 @@
 import { BoxNode } from "@flurrux/math-layout-engine/src/types";
+import { isTopLevelFlatNode } from "../src/top-level-flat-node";
 import { transformEachLayoutChild, transformLayoutTree } from "./transform-layout-tree";
-import { Vector2, add } from './vector2';
-import { hasId } from "./with-id";
+import { add, Vector2 } from './vector2';
 
 type WithGlobalPosition<N> = N & {
 	globalPosition: Vector2
@@ -51,4 +51,4 @@ export const attachGlobalPositions = transformLayoutTree(
 
 export const replacePositionsByGlobal = transformLayoutTree(
 	replaceLocalByGlobalPosition
-)(hasId);
+)(isTopLevelFlatNode);

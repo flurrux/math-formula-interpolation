@@ -1,6 +1,6 @@
 import { AccentNode, CharNode, DelimitedNode, FormulaNode, FractionNode, MathListNode, RootNode, ScriptNode, TextNode, TextualType } from "@flurrux/math-layout-engine/src/types";
 import { unicodeToTypeMap } from "@flurrux/math-layout-engine/src/type-from-unicode";
-import { OptId, WithId } from "./with-id";
+import { OptId, WithId } from "../lib/with-id";
 
 const getNodeTypeByUnicode = (unicode: number): TextualType => {
 	return unicodeToTypeMap[unicode] || "ord";

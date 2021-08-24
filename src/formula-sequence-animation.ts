@@ -3,14 +3,17 @@ import { partitionIntoBooleanSets } from "../lib/boolean-sets";
 import { normSine } from "../lib/easing";
 import { waitMillis } from "../lib/wait-millis";
 import { interpolateByBooleanSets } from "./boolean-set-interpolation";
+import { buildBooleanSets } from "./boolean-sets";
 import { boxNodeOrd } from "./box-node-ord";
+import { renderFlatNodes } from "./box-node-rendering";
 import { FormulaSequence } from "./formula-sequence";
+import { prepareForInterpolation } from "./node-preparation";
 
 export async function animateFormulaSequence(ctx: CanvasRenderingContext2D, sequence: FormulaSequence) {
 	for (const pair of sequence) {
 		const layout1 = prepareForInterpolation(pair[0]);
 		const layout2 = prepareForInterpolation(pair[1]);
-		const boolSets = partitionIntoBooleanSets(boxNodeOrd)(layout1, layout2);
+		const boolSets = buildBooleanSets(layout1, layout2);
 
 		const anim = animate(
 			2000,
@@ -21,6 +24,6 @@ export async function animateFormulaSequence(ctx: CanvasRenderingContext2D, sequ
 			}
 		);
 		await anim.onFinished;
-		await waitMillis(500);
+		await waitMillis(1000);
 	}
 }

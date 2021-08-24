@@ -1,10 +1,10 @@
 import { layoutFormula } from "@flurrux/math-layout-engine";
 import { LayoutResult } from "@flurrux/math-layout-engine/src/layout/layout";
-import { FormulaNode } from "@flurrux/math-layout-engine/src/types";
+import { BoxNode, FormulaNode } from "@flurrux/math-layout-engine/src/types";
 import { pipe } from "fp-ts/lib/function";
-import { flattenById } from "../lib/flatten-layout-tree";
-import { transferIds } from "../lib/transfer-ids";
+import { transferIds } from "./transfer-ids";
 import { replacePositionsByGlobal } from "../lib/transform-baking";
+import { markIdLessTrees } from "./lack-of-id";
 
 const centerOnOrigin = <L extends LayoutResult>(layout: L): L => ({
 	...layout,
@@ -14,11 +14,15 @@ const centerOnOrigin = <L extends LayoutResult>(layout: L): L => ({
 	]
 });
 
-export const prepareForInterpolation = (formulaNode: FormulaNode) => pipe(
+export const prepareForInterpolation = (formulaNode: FormulaNode): BoxNode => pipe(
 	formulaNode,
 	layoutFormula,
 	centerOnOrigin,
 	transferIds(formulaNode),
+	// markIdLessTrees,
+	(result) => {
+		console.log(result);
+		return result;
+	},
 	replacePositionsByGlobal,
-	flattenById
 );
