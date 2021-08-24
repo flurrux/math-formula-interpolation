@@ -291,8 +291,6 @@ function createSequence1(): FormulaSequence {
 				char("-"),
 				char("1")
 			], "-1"),
-			undefined, undefined,
-			"radical(1)"
 		),
 		char("*", "*(2)"),
 		root(
@@ -300,8 +298,6 @@ function createSequence1(): FormulaSequence {
 				char("-"),
 				char("1")
 			], "-1"),
-			undefined, undefined,
-			"radical(2)"
 		),
 	]);
 
@@ -316,10 +312,10 @@ function createSequence1(): FormulaSequence {
 
 	const formula5 = mathList([
 		char("m", "m"),
-		char("*", "*(1)"),
+		char("*"),
 		mathList([
 			char("-", "-"),
-			char("1", "1")
+			char("1")
 		])
 	]);
 
@@ -330,8 +326,8 @@ function createSequence1(): FormulaSequence {
 
 	return [
 		[formula1, formula2],
-		// [formula3, formula4],
-		// [formula5, formula6],
+		[formula3, formula4],
+		[formula5, formula6],
 	];
 }
 

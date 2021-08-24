@@ -19,10 +19,6 @@ export const prepareForInterpolation = (formulaNode: FormulaNode): BoxNode => pi
 	layoutFormula,
 	centerOnOrigin,
 	transferIds(formulaNode),
-	// markIdLessTrees,
-	(result) => {
-		console.log(result);
-		return result;
-	},
+	markIdLessTrees,
 	replacePositionsByGlobal,
 );
