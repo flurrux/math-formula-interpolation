@@ -1,8 +1,12 @@
 
-export type OptId = string | undefined;
+export type OptId = string;
+
+export type IdOwner = {
+	id?: string
+};
 
 export type WithId<T> = T & {
-	id: OptId,
+	id?: OptId,
 };
 
 export function getId(node: WithId<object>): OptId {

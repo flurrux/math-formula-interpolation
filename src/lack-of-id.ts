@@ -3,18 +3,26 @@ import { pipe } from "fp-ts/lib/function";
 import { getLayoutChildNodes } from "../lib/get-child-nodes";
 import { transformEachLayoutChild } from "../lib/transform-layout-tree";
 import { hasId } from "../lib/with-id";
+import { BoxNodeWithProps } from './layout-node-with-props';
 
+type IdOwner = {
+	id?: string
+};
 
-export const isIdLessTree = (node: BoxNode): boolean => {
-	return node.isIdLessTree;
-}
-const addIdLessTreeFlag = <B extends BoxNode>(node: B): B => {
+type IdLessFlagOwner = {
+	isIdLessTree?: true
+};
+type BoxNodeWithIdFlag = BoxNodeWithProps<IdLessFlagOwner>;
+
+export const isIdLessTree = (node: BoxNodeWithIdFlag): boolean => node.isIdLessTree;
+
+const addIdLessTreeFlag = <B extends BoxNode>(node: B): (B & IdLessFlagOwner) => {
 	return { 
 		...node, 
 		isIdLessTree: true
 	};
 }
-const removeIdLessTreeFlag = <B extends BoxNode>(node: B): B => {
+const removeIdLessTreeFlag = <B extends BoxNode>(node: (B & IdLessFlagOwner)): B => {
 	node = { ...node };
 	delete node.isIdLessTree;
 	return node;
@@ -26,7 +34,7 @@ const removeIdLessTreeFlag = <B extends BoxNode>(node: B): B => {
 //- is the largest possible tree that contains no ids,
 //this means that if we would go one node up, there would be at least one id in that tree
 //this also means that if this node has sibling nodes, then there is an id in one of the sibling nodes
-export function markIdLessTrees(layoutRoot: BoxNode): BoxNode {
+export function markIdLessTrees<B extends BoxNodeWithProps<IdOwner>>(layoutRoot: B): (B & IdLessFlagOwner) {
 	if (hasId(layoutRoot)) return layoutRoot;
 
 	layoutRoot = transformEachLayoutChild(markIdLessTrees)(layoutRoot);
