@@ -14,7 +14,7 @@ type IdLessFlagOwner = {
 };
 type BoxNodeWithIdFlag = BoxNodeWithProps<IdLessFlagOwner>;
 
-export const isIdLessTree = (node: BoxNodeWithIdFlag): boolean => node.isIdLessTree;
+export const isIdLessTree = (node: IdLessFlagOwner): boolean => node.isIdLessTree;
 
 const addIdLessTreeFlag = <B extends BoxNode>(node: B): (B & IdLessFlagOwner) => {
 	return { 

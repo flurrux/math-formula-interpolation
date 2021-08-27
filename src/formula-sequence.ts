@@ -1,3 +1,3 @@
-import { FormulaNode } from "@flurrux/math-layout-engine/src/types";
+import { InterpolatableFormulaNode } from "./formula-construction";
 
-export type FormulaSequence = [FormulaNode, FormulaNode][];
+export type FormulaSequence = [InterpolatableFormulaNode, InterpolatableFormulaNode][];

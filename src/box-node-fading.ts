@@ -1,7 +1,7 @@
 import { BoxNode } from "@flurrux/math-layout-engine/src/types";
 import { interpolate } from "../lib/linear-mapping";
 import { add, Vector2, interpolate as lerpVec } from "../lib/vector2";
-import { InterpolatableBoxNode } from "./interpolatable-node";
+import { InterpolatableBoxNode } from "./interpolatable-box-node";
 import { InterpolationContext } from "./interpolation-props";
 
 const fadeNode = (positionDeltas: [Vector2, Vector2], alphas: [number, number]) => (t: number) => <B extends BoxNode>(node: B,): B => {
@@ -15,8 +15,8 @@ const fadeNode = (positionDeltas: [Vector2, Vector2], alphas: [number, number]) 
 	}
 };
 
-const fadeInNodeDefault = fadeNode([[0, 20], [0, 0]], [0, 1]);
-const fadeOutNodeDefault = fadeNode([[0, 0], [0, -20]], [1, 0]);
+export const fadeInNodeDefault = fadeNode([[0, 20], [0, 0]], [0, 1]);
+export const fadeOutNodeDefault = fadeNode([[0, 0], [0, 0]], [1, 0]);
 
 export const fadeInNode = (context: InterpolationContext) => (t: number) => (node: InterpolatableBoxNode): BoxNode => {
 	if (node.fadeIn) return node.fadeIn(node, t, context);

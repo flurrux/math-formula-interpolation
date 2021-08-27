@@ -1,8 +1,11 @@
 import { BoxNode } from "@flurrux/math-layout-engine/src/types";
 import { NonEmptyArray } from "fp-ts/lib/NonEmptyArray";
 import { interpolateNode } from "./box-node-interpolation";
+import { InterpolatableBoxNode } from "./interpolatable-box-node";
 
-export const interpolateByClusters = (t: number) => (clusterA: NonEmptyArray<BoxNode>, clusterB: NonEmptyArray<BoxNode>): BoxNode[] => {
+type Cluster = NonEmptyArray<InterpolatableBoxNode>;
+
+export const interpolateByClusters = (t: number) => (clusterA: Cluster, clusterB: Cluster): BoxNode[] => {
 	if (clusterA.length > 1) {
 		return clusterA.map(
 			(a) => interpolateNode("from")(a, clusterB[0], t)

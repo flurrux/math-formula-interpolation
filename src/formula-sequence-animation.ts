@@ -7,6 +7,7 @@ import { buildBooleanSets } from "./boolean-sets";
 import { boxNodeOrd } from "./box-node-ord";
 import { renderFlatNodes } from "./box-node-rendering";
 import { FormulaSequence } from "./formula-sequence";
+import { InterpolationContext } from "./interpolation-props";
 import { prepareForInterpolation } from "./node-preparation";
 
 export async function animateFormulaSequence(ctx: CanvasRenderingContext2D, sequence: FormulaSequence) {
@@ -14,12 +15,16 @@ export async function animateFormulaSequence(ctx: CanvasRenderingContext2D, sequ
 		const layout1 = prepareForInterpolation(pair[0]);
 		const layout2 = prepareForInterpolation(pair[1]);
 		const boolSets = buildBooleanSets(layout1, layout2);
+		const context: InterpolationContext = {
+			srcNode: layout1,
+			targetNode: layout2
+		};
 
 		const anim = animate(
 			2000,
 			(t) => {
 				t = normSine(t);
-				const nodes = interpolateByBooleanSets(t)(boolSets);
+				const nodes = interpolateByBooleanSets(context)(t)(boolSets);
 				renderFlatNodes(ctx)(nodes);
 			}
 		);
