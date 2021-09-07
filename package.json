@@ -13,8 +13,6 @@
   "license": "ISC",
   "dependencies": {
     "@flurrux/math-layout-engine": "^1.0.3",
-    "@parcel/config-default": "^2.0.0-rc.0",
-    "@parcel/resolver-glob": "^2.0.0-nightly.2338",
     "color-rgba": "^2.1.1",
     "fp-ts": "^2.11.1",
     "ramda": "^0.26.1"
@@ -22,6 +20,8 @@
   "devDependencies": {
     "cssnano": "^4.1.10",
     "parcel": "^2.0.0-rc.0",
-    "typescript": "^3.7.2"
+    "@parcel/config-default": "^2.0.0-rc.0",
+	"@parcel/resolver-glob": "^2.0.0-nightly.2338",
+	"typescript": "^3.7.2"
   }
 }
