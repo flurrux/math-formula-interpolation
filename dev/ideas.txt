@@ -1,6 +1,6 @@
 
 - find a good way to specify origin points, maybe when writing out nodes:
-{ type: "bin", value: "+", origin: [0.5, 0.5] } //place the origin at the middle of the node
+{ type: "bin", value: "+", origin: [0.5, 0] } //place the origin at the middle of the node
 
 - only non-group nodes are actually interpolated: char, text, rule, contours, rule
 
@@ -15,7 +15,17 @@ transition cases:
 - specfiy node correspondence
     - explicitly write them out as object: { from: node1, to: node2 }
     - specify the path: { from: [["items", 2], "numerator", ["items", 1]], to: ... }
-    - specify an id in the formula, 
-    for interpolation functions write then: { id: [some-id], interpolate: [some-function] }
-    if a node branches into mutliple, the ids are not unique anymore. in that case use a 
-    second id, branchId, that takes precedence over the first id. 
+    - specify ids in the node: 
+        { corrId: [leftId, rightId] | singleId, (opt) uniqueId } 
+        correspondences are either to the "left" or "right" direction. 
+        if two nodes have the same corrId, they correspond. 
+        corrIds need not be unique, so in a case where they are not unique, 
+        use uniqueId to setup a custom interpolation-function.
+
+- specify transition for a group of nodes
+    - specify the ids of the source group and the target group
+    - specify the id of the parent and then all the sub-nodes will be selected
+
+- some nodes only appear after layout like: rule of a fraction, radical of root. 
+to equip a rule with an id: { type: "fraction", rule: { corrId: "rule1" } }, and similar with the radical.
+

@@ -2,12 +2,15 @@
 import { Style } from '@flurrux/math-layout-engine/src/style';
 import { FormulaNode, BoxNode, Dimensions } from '@flurrux/math-layout-engine/src/types';
 import { fromPairs, identity, map, reduce, assoc, assocPath, merge, omit } from 'ramda';
-import { interpolate, viewPath } from '../lib/util';
-import { interpolate as lerpVectors } from '../lib/vector2';
+import { interpolate, viewPath, normSine } from '../lib/util';
+import { interpolate as lerpVectors, add as addVecs, Vector2 } from '../lib/vector2';
 import { collectIds, IdPathMap } from '../lib/id-correspondence';
 import { PropertyPath } from '../lib/types';
 
 //types #######
+
+
+
 
 type InterpolatableNodeType = "char" | "text" | "contours" | "rule";
 interface InterpolatableNode extends BoxNode {
@@ -40,7 +43,7 @@ export const normalizePathOrNodeSpecEntry = (from: BoxNode, to: BoxNode) => ((en
 	return {
 		from: lookUpBoxNodeByByPathOrNode(from, entry.from),
 		to: lookUpBoxNodeByByPathOrNode(to, entry.to),
-		interpolate: entry.interpolate || interpolateNodes
+		interpolate: entry.interpolate || interpolateNodesSmooth
 	}
 });
 
@@ -54,12 +57,12 @@ const createCorrespondenceFromIds = (from: FormulaNode, to: FormulaNode) => {
 			fromPath: PropertyPath, toPath: PropertyPath,
 		}[] = [];
 
-	const fromIdMap = collectIds(from);
-	const toIdMap = collectIds(to);	
+	const fromIdMap = collectIds(from, true);
+	const toIdMap = collectIds(to, false);	
 	const ids = Reflect.ownKeys(fromIdMap) as string[];	
 	for (const id of ids) {
-		const fromPaths = fromIdMap[id];
-		const toPaths = toIdMap[id];
+		const fromPaths = fromIdMap[id] || [];
+		const toPaths = toIdMap[id] || [];
 
 		//this is a double-loop because it's easier than to write out all the cases
 		//case 1: single -> single
@@ -108,7 +111,7 @@ export const preProcessLerpSpecWithIds = (from: FormulaNode, to: FormulaNode, le
 	const correspondencesById = createCorrespondenceFromIds(from, to);
 	const lerpSpecsById : NodeInterpolationSpec[] = correspondencesById.map(corr => {
 		const corrLerpSpec = lerpSpecsSeperated.byId.find((spec) => spec.from === corr.fromUniqueId && spec.to === corr.toUniqueId);
-		const interpolateFunc = corrLerpSpec ? corrLerpSpec.interpolate : interpolateNodes;
+		const interpolateFunc = corrLerpSpec ? corrLerpSpec.interpolate : interpolateNodesSmooth
 		return {
 			from: corr.fromPath,
 			to: corr.toPath,
@@ -154,5 +157,5 @@ export const interpolateNodes = (a: InterpolatableNode, b: InterpolatableNode, t
         dimensions: interpolateDimensions(a.dimensions, b.dimensions, t)
     }
 };
-
+const interpolateNodesSmooth = (a: InterpolatableNode, b: InterpolatableNode, t: number) => interpolateNodes(a, b, normSine(t));
 
