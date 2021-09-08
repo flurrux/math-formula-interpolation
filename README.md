@@ -8,7 +8,7 @@
 ## about  
 
 simple interpolation between formulas.  
-(and i really mean **simple**, see limitations).  
+(and i really mean **simple**, see [limitations](#limitations)).  
 
 this library uses another library of mine, https://github.com/flurrux/math-layout-engine, which i originally wrote for the purpose of animating formulas.  
 
@@ -28,7 +28,7 @@ to
 
 	import fonts from 'url:./*.ttf';
 
-
+this is only temporary until i update the parcel version of the layout-engine.  
 
 
 ## examples  
@@ -236,7 +236,15 @@ in the following example, i use \`interpolate\` and \`fadeOut\`to move the minus
 
 ## limitations  
 
-elements can only be moved and scaled but not morphed.  
+currently, elements can only be moved and scaled but not morphed.  
 
 dynamically sized contours like delimiters or radicals do not grow/shrink appropriately when interpolated.  
-this should definitely be supported at some point.  
+the reason is that the geometry of the src- and target contour may differ from each other and i have not yet seriously worked on a way to interpolate such shapes. (it should definitely be easier to interpolate between two similar delimiters than any arbitrary shapes.)  
+
+see how the radical on the left side is not growing to accomodate the two symbols x and y:  
+
+![non adaptive radical gif](./example-gifs/radical-not-adaptive.gif)
+
+it should've looked like this:  
+
+![adaptive radical image](./example-gifs/radical-adaptive-goal.png)

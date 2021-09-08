@@ -606,10 +606,37 @@ function createSequence8(): FormulaSequence {
 	];
 }
 
+//demonstration of a square root that is not growing dynamically
+function createSequence9(): FormulaSequence {
+	const f1 = mathList([
+		root(
+			char("x", "x"),
+			undefined,
+			undefined, undefined,
+			{ id: "rad" }
+		),
+		char("*", "*"),
+		root(char("y", "y")),
+	]);
+	const f2 = root(
+		mathList([
+			char("x", "x"),
+			char("*", "*"),
+			char("y", "y"),
+		]),
+		undefined,
+		undefined, undefined,
+		{ id: "rad" }
+	);
+
+	return [
+		[f2, f1],
+	];
+}
 
 
 
-const formulaSequence = createSequence1();
+const formulaSequence = createSequence9();
 
 
 
