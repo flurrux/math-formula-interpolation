@@ -3,15 +3,16 @@ import { BoxCharNode } from "@flurrux/math-layout-engine/src/layout/char-layout"
 import { BoxDelimitedNode } from "@flurrux/math-layout-engine/src/layout/delimiter/delimited-layout";
 import { BoxFractionNode } from "@flurrux/math-layout-engine/src/layout/fraction-layout";
 import { BoxMathListNode } from "@flurrux/math-layout-engine/src/layout/mathlist-layout";
+import { BoxMatrixNode } from "@flurrux/math-layout-engine/src/layout/matrix-layout";
 import { BoxRootNode } from "@flurrux/math-layout-engine/src/layout/root/root-layout";
 import { BoxScriptNode } from "@flurrux/math-layout-engine/src/layout/script/script-layout";
 import { BoxTextNode } from "@flurrux/math-layout-engine/src/layout/text-layout";
 import { unicodeToTypeMap } from "@flurrux/math-layout-engine/src/type-from-unicode";
-import { AccentNode, CharNode, ContoursNode, DelimitedNode, FractionNode, MathListNode, RootNode, RuleNode, ScriptNode, TextNode, TextualType } from "@flurrux/math-layout-engine/src/types";
+import { AccentNode, CharNode, ContoursNode, DelimitedNode, FractionNode, MathListNode, MatrixNode, MatrixStyle, RootNode, RuleNode, ScriptNode, TextNode, TextualType } from "@flurrux/math-layout-engine/src/types";
 import { InterpolationProps, WithInterpolationProps } from "./interpolation-props";
 
 
-export type InterpolatableFormulaNode = InterpolatableCharNode | InterpolatableTextNode | InterpolatableMathList | InterpolatableFractionNode | InterpolatableScriptNode | InterpolatableAccentNode | InterpolatableRootNode | InterpolatableDelimitedNode;
+export type InterpolatableFormulaNode = InterpolatableCharNode | InterpolatableTextNode | InterpolatableMathList | InterpolatableFractionNode | InterpolatableScriptNode | InterpolatableAccentNode | InterpolatableRootNode | InterpolatableDelimitedNode | InterpolatableMatrixNode;
 
 
 const getNodeTypeByUnicode = (unicode: number): TextualType => {
@@ -192,7 +193,7 @@ export function delimit(
 	delimited: InterpolatableFormulaNode,
 	rightDelim: InterpolatableCharNode,
 	id: string = undefined, 
-	props: InterpolationProps<BoxDelimitedNode>): InterpolatableDelimitedNode {
+	props: InterpolationProps<BoxDelimitedNode> = {}): InterpolatableDelimitedNode {
 	
 	return insertIdAndProps(id, props)({
 		type: "delimited",
@@ -200,3 +201,18 @@ export function delimit(
 		delimited
 	})
 };
+
+
+
+type InterpolatableMatrixNode = WithInterpolationProps<
+	MatrixNode & { items: InterpolatableFormulaNode[] },
+	BoxMatrixNode
+>;
+
+export function matrix(items: InterpolatableFormulaNode[], rowCount: number, colCount: number, style: MatrixStyle, id: string = undefined, props: InterpolationProps<BoxMatrixNode> = {}): InterpolatableMatrixNode {
+	return insertIdAndProps(id, props)({
+		type: "matrix",
+		items, style,
+		rowCount, colCount,
+	})
+}
