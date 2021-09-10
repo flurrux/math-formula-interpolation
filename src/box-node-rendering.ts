@@ -6,7 +6,7 @@ function getNodeAlpha(node: BoxNode): number {
 	return node.alpha;
 }
 
-const renderBoxNode = (ctx: CanvasRenderingContext2D) => (boxNode: BoxNode) => {
+export const renderBoxNode = (ctx: CanvasRenderingContext2D) => (boxNode: BoxNode) => {
 	ctx.save();
 	//apply a slight rotation so that texts aren't snapped to pixels vertically
 	ctx.rotate(0.001);
