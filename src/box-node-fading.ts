@@ -4,7 +4,7 @@ import { add, Vector2, interpolate as lerpVec } from "../lib/vector2";
 import { InterpolatableBoxNode } from "./interpolatable-box-node";
 import { InterpolationContext } from "./interpolation-props";
 
-const fadeNode = (positionDeltas: [Vector2, Vector2], alphas: [number, number]) => (t: number) => <B extends BoxNode>(node: B,): B => {
+export const fadeNode = (positionDeltas: [Vector2, Vector2], alphas: [number, number]) => (t: number) => <B extends BoxNode>(node: B,): B => {
 	return {
 		...node,
 		position: add(

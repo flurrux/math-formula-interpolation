@@ -45,6 +45,6 @@ export async function animateFormulaSequence(ctx: CanvasRenderingContext2D, sequ
 			}
 		);
 		await anim.onFinished;
-		await waitMillis(1000);
+		await waitMillis(1800);
 	}
 }

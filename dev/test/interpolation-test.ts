@@ -1,3 +1,4 @@
+import { BoxCharNode } from "@flurrux/math-layout-engine/src/layout/char-layout";
 import { loadKatexFontFaces } from "@flurrux/math-layout-engine/src/rendering/render";
 import { Style, withStyle } from "@flurrux/math-layout-engine/src/style";
 import { BoxNode, ContoursNode, MatrixStyle } from "@flurrux/math-layout-engine/src/types";
@@ -5,13 +6,13 @@ import { intersperse } from "fp-ts/lib/Array";
 import { range } from "fp-ts/lib/NonEmptyArray";
 import { bezierPoint } from "../../lib/bezier-util";
 import { Vector2, subtract, add, interpolate } from "../../lib/vector2";
-import { fadeOutNode, fadeOutNodeDefault } from "../../src/box-node-fading";
+import { fadeInNodeDefault, fadeOutNode, fadeOutNodeDefault, fadeNode} from "../../src/box-node-fading";
 import { interpolateNodeDefault } from "../../src/box-node-interpolation";
 import { renderFlatNodes } from "../../src/box-node-rendering";
 import { char, delimit, fraction, mathList, matrix, root, script } from "../../src/formula-construction";
 import { FormulaSequence } from "../../src/formula-sequence";
 import { animateFormulaSequence, renderStart } from "../../src/formula-sequence-animation";
-import { FadeFunc, InterpolationFunc } from "../../src/interpolation-props";
+import { FadeFunc, InterpolationFunc, InterpolationProps } from "../../src/interpolation-props";
 import { prepareForInterpolation } from "../../src/node-preparation";
 
 
@@ -39,6 +40,9 @@ const createBezierPathInterpolation = (relCtrlPoints: Vector2[]) => <B extends B
 	return result;
 };
 
+const bezierLerpProps = <B extends BoxNode>(relCtrlPoints: Vector2[]): InterpolationProps<B> => ({
+	interpolate: createBezierPathInterpolation(relCtrlPoints)
+});
 
 const defaultStyle: Style = {
 	fontSize: 45,
@@ -634,9 +638,275 @@ function createSequence9(): FormulaSequence {
 	];
 }
 
+//l(x) = r(x) -> l(x) - r(x) = 0 -> sum_j l_j * x^j - sum_j l_j * x^j = 0 -> sum_j (l_j - r_j) * x^j = 0
+function createSequence10(): FormulaSequence {
+	const fadeInMinus: FadeFunc<BoxCharNode> = (node, t, ctx) => {
+		const srcPosition = subtract(ctx.srcNode.items[2].position, [30, 0]);
+		const targetPosition = ctx.targetNode.items[1].position;
+		const animPosition = interpolatePointByRelCtrlPoints([[0.5, -0.5]])(srcPosition, targetPosition, t);
+		node = fadeInNodeDefault(t)(node);
+		node = { ...node, position: animPosition };
+		return node;
+	};
+
+	const f1 = mathList([
+		mathList(
+			["l", "(", "x", ")"].map(char), "l"
+		),
+		char(
+			"=", "=", 
+			{ interpolate: createBezierPathInterpolation([[0.5, -0.4]]) }
+		),
+		mathList(
+			["r", "(", "x", ")"].map(char), "r", 
+			{ interpolate: createBezierPathInterpolation([[0.5, -1.3]]) }
+		),
+	]);
+	
+	const f2 = mathList([
+		mathList(["l", "(", "x", ")"].map(char), "l"),
+		char(
+			"-", undefined,
+			{ fadeIn: fadeInMinus }
+		),
+		mathList(["r", "(", "x", ")"].map(char), "r"),
+		char("=", "="),
+		char("0"),
+	]);
+
+	const f3 = mathList([
+		mathList([
+			char("l", "l"),
+			char("("),
+			char("x", "l-x"),
+			char(")"),
+		]),
+		char("-", "-"),
+		mathList([
+			char("r", "r"),
+			char("("),
+			char("x", "r-x"),
+			char(")"),
+		]),
+		char("=", "="),
+		char("0", "0"),
+	]);
+
+	const makePolynomialSum1 = (termSymbol: string) => {
+		return mathList([
+			script(
+				{
+					type: "op",
+					value: "∑"
+				},
+				undefined,
+				char("j")
+			),
+			script(
+				char(termSymbol, termSymbol),
+				undefined,
+				char("j")
+			),
+			char("*"),
+			script(
+				char("x", `${termSymbol}-x`),
+				char("j"),
+				undefined,
+			)
+		]);
+	};
+
+	const f4 = mathList([
+		makePolynomialSum1("l"),
+		char("-", "-"),
+		makePolynomialSum1("r"),
+		char("=", "="),
+		char("0", "0"),
+	]);
+
+	const makePolynomialSum2 = (termSymbol: string, sumCtrlPoints: Vector2[], xCtrlPoints: Vector2[], mulCtrlPoints: Vector2[]) => {
+		return mathList([
+			script(
+				{
+					type: "op",
+					value: "∑"
+				},
+				undefined,
+				char("j"),
+				"∑",
+				{ interpolate: createBezierPathInterpolation(sumCtrlPoints) }
+			),
+			script(
+				char(termSymbol),
+				undefined,
+				char("j"),
+				termSymbol
+			),
+			char("*", "*", { interpolate: createBezierPathInterpolation(mulCtrlPoints) }),
+			script(
+				char("x"),
+				char("j"),
+				undefined,
+				"x",
+				{ interpolate: createBezierPathInterpolation(xCtrlPoints) }
+			)
+		]);
+	};
+
+	const f5 = mathList([
+		makePolynomialSum2("l", [], [[0.5, 0.6]], [[0.5, 0.6]]),
+		char("-", "-"),
+		makePolynomialSum2("r", [[0.5, 0.8]], [], []),
+		char("=", "="),
+		char("0", "0"),
+	]);
+
+	const fadeInHorizontally = <B extends BoxNode>(offset: number): FadeFunc<B> => {
+		return (node, t) => {
+			return fadeNode([[offset, 0], [0, 0]], [0, 1])(t)(node);
+		}
+	};
+
+	const f6 = mathList([
+		script(
+			{
+				type: "op",
+				value: "∑"
+			},
+			undefined,
+			char("j"),
+			"∑"
+		),
+		char("(", undefined, { fadeIn: fadeInHorizontally(-60) }),
+		script(
+			char("l"),
+			undefined,
+			char("j"),
+			"l"
+		),
+		char("-", "-"),
+		script(
+			char("r"),
+			undefined,
+			char("j"),
+			"r"
+		),
+		char(")", undefined, { fadeIn: fadeInHorizontally(+60) }),
+
+		char("*", "*"),
+		script(
+			char("x"),
+			char("j"),
+			undefined,
+			"x"
+		),
+
+		char("=", "="),
+		char("0", "0"),
+	]);
+
+	return [
+		[f1, f2],
+		[f3, f4],
+		[f5, f6],
+	];
+}
+
+function createSequence11(): FormulaSequence {
+	const f1 = mathList([
+		char("8", "8"),
+		char("*", "*"),
+		script(
+			char("x"),
+			char("2"),
+			undefined,
+			"x^2"
+		),
+		char("-"),
+		char("5", "5", bezierLerpProps([[0.5, 1]])),
+		char("=", "="),
+		char("0")
+	]);
+	const f2 = mathList([
+		char("8", "8"),
+		char("*", "*"),
+		script(
+			char("x"),
+			char("2"),
+			undefined,
+			"x^2"
+		),
+		char("=", "="),
+		char("5", "5")
+	]);
+
+	
+	const f3 = mathList([
+		char("8", "8", bezierLerpProps([[0.5, -0.7]])),
+		char("*", "*"),
+		script(
+			char("x"),
+			char("2"),
+			undefined,
+			"x^2"
+		),
+		char("=", "="),
+		char("5", "5")
+	]);
+
+	const f4 = mathList([
+		script(
+			char("x"),
+			char("2"),
+			undefined,
+			"x^2"
+		),
+		char("=", "="),
+		fraction(
+			char("5", "5"),
+			char("8", "8"),
+		)
+	]);
+
+	const f5 = mathList([
+		script(
+			char("x", "x"),
+			char("2"),
+			undefined,
+		),
+		char("=", "="),
+		fraction(
+			char("5"),
+			char("8"),
+			"frac"
+		)
+	]);
+
+	const f6 = mathList([
+		char("x", "x"),
+		char("=", "="),
+		{
+			type: "ord",
+			value: "±"
+		},
+		root(
+			fraction(
+				char("5"),
+				char("8"),
+				"frac"
+			)
+		)
+	]);
+
+	return [
+		[f1, f2],
+		[f3, f4],
+		[f5, f6]
+	];
+}
 
 
-const formulaSequence = createSequence9();
+const formulaSequence = createSequence11();
 
 
 
