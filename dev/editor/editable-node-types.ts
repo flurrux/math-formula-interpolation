@@ -9,7 +9,8 @@ export type LayoutAttachedProps = {
 		width: number,
 		yMin: number,
 		yMax: number
-	}
+	},
+	renderStyle: Style
 };
 
 export type EditorNodeProps = LayoutAttachedProps & {
@@ -20,8 +21,8 @@ export type EditorNodeProps = LayoutAttachedProps & {
 export type EditableFormulaNode = EditableCharNode | EditableTextNode | EditableMathListNode | EditableFractionNode | EditableScriptNode | EditableAccentNode | EditableMatrixNode | EditableMatrixNode | EditableDelimitedNode | EditableRootNode;
 
 export type EditableContoursNode = ContoursNode & EditorNodeProps;
-export type EditableCharNode = CharNode & EditorNodeProps;
-export type EditableTextNode = TextNode & EditorNodeProps;
+export type EditableCharNode = CharNode & EditorNodeProps & { char: string };
+export type EditableTextNode = TextNode & EditorNodeProps & { text: string };
 export type EditableMathListNode = MathListNode & EditorNodeProps & {
 	items: EditableFormulaNode[]
 };

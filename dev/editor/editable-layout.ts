@@ -10,7 +10,7 @@ import { BoxTextNode } from "@flurrux/math-layout-engine/src/layout/text-layout"
 import { isNodeChar, isNodeTextual } from "@flurrux/math-layout-engine/src/node-types";
 import { BoxNode, MathListNode, MatrixNode } from "@flurrux/math-layout-engine/src/types";
 import { EditableAccentNode, EditableCharNode, EditableDelimitedNode, EditableFormulaNode, EditableFractionNode, EditableMathListNode, EditableMatrixNode, EditableRootNode, EditableScriptNode, EditableTextNode, LayoutAttachedProps } from "./editable-node-types";
-import { isAccented, isDelimited, isFraction, isMathList, isMatrix, isRoot, isScript } from '../../lib/type-guards';
+import { isAccented, isCharNode, isDelimited, isFraction, isMathList, isMatrix, isRoot, isScript, isTextNode } from '../../lib/type-guards';
 import { BoxMathListNode } from "@flurrux/math-layout-engine/src/layout/mathlist-layout";
 import { zipWith } from "fp-ts/lib/Array";
 
@@ -21,7 +21,8 @@ type EditableNodeAndBoxNodePair = [EditableCharNode, BoxCharNode] | [EditableTex
 function getLayoutAttachedProps(node: BoxNode): LayoutAttachedProps {
 	return {
 		position: node.position,
-		dimensions: node.dimensions
+		dimensions: node.dimensions,
+		renderStyle: node.style
 	}
 }
 
@@ -33,7 +34,13 @@ const assignLayoutAttachedProps = (boxNode: BoxNode) => <N extends object>(node:
 const combineBoxNodeAndEditableNode = <N extends EditableFormulaNode>(boxNode: BoxNode, node: N): N => {
 	node = assignLayoutAttachedProps(boxNode)(node);
 
-	if (isMathList(node) || isMatrix(node)){
+	if (isCharNode(node)){
+		node.char = (boxNode as BoxCharNode).char;
+	}
+	else if (isTextNode(node)){
+		node.text = (boxNode as BoxTextNode).text;
+	}
+	else if (isMathList(node) || isMatrix(node)){
 		const boxNodeItems = (boxNode as (BoxMathListNode | BoxMatrixNode)).items;
 		node.items = zipWith(boxNodeItems, node.items, combineBoxNodeAndEditableNode);
 	}

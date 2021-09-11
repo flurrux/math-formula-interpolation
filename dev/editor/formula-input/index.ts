@@ -1,5 +1,10 @@
+import { setPosition } from '@flurrux/math-layout-engine/src/layout/layout-util';
+import { loadKatexFontFaces } from '@flurrux/math-layout-engine/src/rendering/render';
+import { pipe } from 'fp-ts/lib/function';
+import { setupFullScreenCtx } from '../../../lib/fullscreen-ctx';
 import { mathList, char } from '../../../src/formula-construction';
 import { layoutEditableNode } from '../editable-layout';
+import { renderEditableNode } from '../editable-rendering';
 
 //ideas: 
 //- selection & deletion of nodes
@@ -14,12 +19,24 @@ import { layoutEditableNode } from '../editable-layout';
 //- a toolbar with different composite nodes that can be instantiate with empty boxes
 
 
-const testNode = layoutEditableNode(
-	mathList([
-		char("a"), 
-		char("+"),
-		char("b")
-	])
-);
+async function main(){
+	await loadKatexFontFaces();
+	const ctx = setupFullScreenCtx();
 
+	const testNode = pipe(
+		mathList([
+			char("a"),
+			char("+"),
+			char("b")
+		]),
+		layoutEditableNode,
+		(node) => ({
+			...node,
+			position: [0, 0]
+		})
+	);
+	
+	renderEditableNode(ctx, testNode);
+}
 
+main();

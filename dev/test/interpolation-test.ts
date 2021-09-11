@@ -5,6 +5,7 @@ import { BoxNode, ContoursNode, MatrixStyle } from "@flurrux/math-layout-engine/
 import { intersperse } from "fp-ts/lib/Array";
 import { range } from "fp-ts/lib/NonEmptyArray";
 import { bezierPoint } from "../../lib/bezier-util";
+import { setupFullScreenCtx } from "../../lib/fullscreen-ctx";
 import { Vector2, subtract, add, interpolate } from "../../lib/vector2";
 import { fadeInNodeDefault, fadeOutNode, fadeOutNodeDefault, fadeNode} from "../../src/box-node-fading";
 import { interpolateNodeDefault } from "../../src/box-node-interpolation";
@@ -910,15 +911,7 @@ const formulaSequence = createSequence11();
 
 
 
-document.body.insertAdjacentHTML("beforeend", "<canvas></canvas>");
-const canvas = document.body.querySelector("canvas");
-Object.assign(canvas, {
-	width: window.innerWidth,
-	height: window.innerHeight
-});
-const ctx = canvas.getContext("2d");
-
-
+const ctx = setupFullScreenCtx();
 
 loadKatexFontFaces().then(
 	() => renderStart(ctx, formulaSequence)

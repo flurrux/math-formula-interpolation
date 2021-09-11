@@ -1,72 +1,74 @@
-import { BoxAccentNode } from "@flurrux/math-layout-engine/src/layout/accent-layout";
-import { BoxCharNode } from "@flurrux/math-layout-engine/src/layout/char-layout";
-import { BoxDelimitedNode } from "@flurrux/math-layout-engine/src/layout/delimiter/delimited-layout";
-import { BoxFractionNode } from "@flurrux/math-layout-engine/src/layout/fraction-layout";
-import { BoxMathListNode } from "@flurrux/math-layout-engine/src/layout/mathlist-layout";
-import { BoxMatrixNode } from "@flurrux/math-layout-engine/src/layout/matrix-layout";
-import { BoxRootNode } from "@flurrux/math-layout-engine/src/layout/root/root-layout";
-import { BoxScriptNode } from "@flurrux/math-layout-engine/src/layout/script/script-layout";
-import { renderNode } from "@flurrux/math-layout-engine/src/rendering/render";
-import { BoxNode, BoxNodeType } from "@flurrux/math-layout-engine/src/types";
-import { isAccented, isCharNode, isDelimited, isFraction, isMathList, isMatrix, isRoot, isScript, isTextNode, isTextualNode } from "../../lib/type-guards";
-import { renderBoxNode } from "../../src/box-node-rendering";
-import { EditableFormulaNode } from "./editable-node-types";
+import { renderBoundingBox, renderChar, renderContours, renderNode, renderRule, renderText, renderTextNode } from "@flurrux/math-layout-engine/src/rendering/render";
+import { Style } from "@flurrux/math-layout-engine/src/style";
+import { isAccented, isCharNode, isDelimited, isFraction, isMathList, isMatrix, isRoot, isScript, isTextualNode } from "../../lib/type-guards";
+import { EditableFormulaNode, LayoutAttachedProps } from "./editable-node-types";
+
+
+const applyColorToCtx = (ctx: CanvasRenderingContext2D) => (style: Style) => {
+	const { color } = style;
+	if (!color) return;
+
+	Object.assign(ctx, {
+		strokeStyle: color,
+		fillStyle: color
+	});
+};
+
+
+
+type OptEditableFormulaNode = EditableFormulaNode | null | undefined;
+
+const renderEditableNodesRec = (ctx: CanvasRenderingContext2D) => (nodes: OptEditableFormulaNode[]) => {
+	for (const node of nodes){
+		if (!node) continue;
+		renderEditableNodeRec(ctx)(node);
+	}
+};
 
 const renderEditableNodeRec = (ctx: CanvasRenderingContext2D) => (node: EditableFormulaNode) => {
-	
-	if (isCharNode(node)){
-		return { ...node, type: "char" };
-	}
-	if (isTextNode(node)){
-		return { ...node, type: "text" };
-	}
+	ctx.save();
+	ctx.translate(...node.position);
 
-	if (isMathList(node) || isMatrix(node)){
-		return {
+	renderBoundingBox(ctx, node);
+	applyColorToCtx(ctx)(node.renderStyle);
+
+	if (isTextualNode(node)){
+		const boxType = isCharNode(node) ? "char" : "text";
+		const renderableNode = {
 			...node,
-			items: node.items.map(editableToBoxNode)
-		} as (BoxMathListNode | BoxMatrixNode)
-	}
-	if (isFraction(node)){
-		return {
-			...node,
-			numerator: editableToBoxNode(node.numerator),
-			denominator: editableToBoxNode(node.denominator),
-			rule: node.rule
-		} as BoxFractionNode;
-	}
-	if (isScript(node)){
-		let boxScriptNode: BoxScriptNode = { ...node };
-		boxScriptNode.nucleus = editableToBoxNode(node.nucleus);
-		if (node.sup) boxScriptNode.sup = editableToBoxNode(node.sup);
-		if (node.sub) boxScriptNode.sub = editableToBoxNode(node.sub);
-		return boxScriptNode;
-	}
-	if (isAccented(node)){
-		return {
-			...node,
-			nucleus: editableToBoxNode(node.nucleus),
-			accent: editableToBoxNode(node.accent) as BoxCharNode
-		} as BoxAccentNode;
-	}
-	if (isRoot(node)){
-		let boxRootNode: BoxRootNode = {
-			...node,
-			radicand: editableToBoxNode(node.radicand),
-			radical: node.radical
+			style: node.renderStyle,
+			type: boxType
 		};
-		if (node.index){
-			boxRootNode.index = editableToBoxNode(node.index);
+		if (boxType === "char"){
+			renderChar(ctx, renderableNode);
 		}
-		return boxRootNode;
+		else if (boxType === "text"){
+			renderTextNode(ctx, renderableNode);
+		}
 	}
-	if (isDelimited(node)){
-		return {
-			...node,
-			delimited: editableToBoxNode(node.delimited)
-		} as BoxDelimitedNode;
+	else if (isMathList(node) || isMatrix(node)){
+		node.items.forEach(renderEditableNodeRec(ctx));
 	}
-	return node;
+	else if (isFraction(node)){
+		renderEditableNodesRec(ctx)([node.numerator, node.denominator]);
+		renderRule(ctx, node.rule);
+	}
+	else if (isScript(node)){
+		renderEditableNodesRec(ctx)([node.nucleus, node.sup, node.sub]);
+	}
+	else if (isAccented(node)){
+		renderEditableNodesRec(ctx)([node.nucleus, node.accent]);
+	}
+	else if (isRoot(node)){
+		renderEditableNodesRec(ctx)([node.radicand, node.index]);
+		renderContours(ctx, node.radical);
+	}
+	else if (isDelimited(node)){
+		renderEditableNodeRec(ctx)(node.delimited);
+		renderContours(ctx, node.leftDelim);
+		renderContours(ctx, node.rightDelim);
+	}
+	ctx.restore();
 }
 
 export const renderEditableNode = (ctx: CanvasRenderingContext2D, node: EditableFormulaNode) => {
@@ -76,6 +78,8 @@ export const renderEditableNode = (ctx: CanvasRenderingContext2D, node: Editable
 	const [w, h] = [canvas.width, canvas.height];
 	ctx.fillStyle = "#dedede";
 	ctx.fillRect(0, 0, w, h);
+	ctx.textAlign = "left";
+	ctx.textBaseline = "alphabetic";
 	
 	ctx.setTransform(1, 0, 0, -1, w / 2, h / 2);
 	
